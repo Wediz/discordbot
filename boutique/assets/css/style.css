@@ -310,6 +310,10 @@ tbody td { padding: 10px 14px; }
 .confirm-box p  { color: var(--muted); font-size: .875rem; margin-bottom: 22px; }
 .confirm-actions { display: flex; gap: 12px; justify-content: center; }
 
+/* ── Ligne vente sans prix d'achat ── */
+tbody tr.row-warn { background: rgba(249,180,74,.04); }
+tbody tr.row-warn:hover { background: rgba(249,180,74,.08); }
+
 /* ── Misc ── */
 .text-green  { color: var(--accent2); }
 .text-red    { color: var(--danger); }

@@ -414,6 +414,9 @@ async function loadVentes() {
     const { data } = await api(`api/ventes.php?${params}`);
     if (!data.length) { wrap.innerHTML = '<div class="empty"><div class="empty-icon">🛍️</div><p>Aucune vente</p></div>'; return; }
 
+    // Stocker les données pour l'édition
+    window._ventesData = data;
+
     wrap.innerHTML = `
       <div class="table-wrap">
       <table>
@@ -421,25 +424,29 @@ async function loadVentes() {
           <th>Date</th><th>Article</th><th>Catégorie</th><th>Canal</th>
           <th class="td-right">Achat</th><th class="td-right">Vente</th><th class="td-right">Promo</th>
           <th class="td-right">Qté</th><th class="td-right">Bénéfice</th><th class="td-right">Marge</th>
-          <th></th>
+          <th style="min-width:80px"></th>
         </tr></thead>
         <tbody>
           ${data.map(v => {
             const pvR = v.prix_vente*(1-v.promo_pourcent/100);
             const ben = (pvR-v.prix_achat)*v.quantite;
             const marge = pvR>0?(pvR-v.prix_achat)/pvR*100:0;
-            return `<tr>
+            const paManquant = v.prix_achat === 0;
+            return `<tr class="${paManquant ? 'row-warn' : ''}">
               <td>${v.date}</td>
-              <td><strong>${escHtml(v.article)}</strong>${v.notes?`<br><small class="text-muted">${escHtml(v.notes)}</small>`:''}  </td>
+              <td><strong>${escHtml(v.article)}</strong>${v.notes?`<br><small class="text-muted">${escHtml(v.notes)}</small>`:''}${v.source==='shopify'?'<span class="tag tag-blue" style="margin-left:4px;font-size:.65rem">Shopify</span>':''}</td>
               <td><span class="tag tag-purple">${v.categorie}</span></td>
               <td><span class="tag tag-blue">${v.canal_vente}</span></td>
-              <td class="td-right">${eur(v.prix_achat)}</td>
+              <td class="td-right ${paManquant?'text-orange fw-bold':''}">${paManquant?'⚠️ ':''} ${eur(v.prix_achat)}</td>
               <td class="td-right">${eur(pvR)}</td>
               <td class="td-right">${v.promo_pourcent>0?`<span class="tag tag-orange">-${v.promo_pourcent}%</span>`:'—'}</td>
               <td class="td-center">${v.quantite}</td>
               <td class="td-right fw-bold ${ben>=0?'text-green':'text-red'}">${eur(ben)}</td>
               <td class="td-right">${pct(marge)}</td>
-              <td><button class="btn btn-danger btn-sm btn-icon" onclick="deleteVente(${v.id})">🗑</button></td>
+              <td>
+                <button class="btn btn-ghost btn-sm btn-icon" onclick="editVente(${v.id})" title="Modifier">✏️</button>
+                <button class="btn btn-danger btn-sm btn-icon" onclick="deleteVente(${v.id})" title="Supprimer">🗑</button>
+              </td>
             </tr>`;
           }).join('')}
         </tbody>
@@ -447,6 +454,135 @@ async function loadVentes() {
   } catch(err) {
     wrap.innerHTML = `<div class="empty"><p>${err.message}</p></div>`;
   }
+}
+
+function editVente(id) {
+  const v = (window._ventesData || []).find(x => x.id === id);
+  if (!v) { toast('Vente introuvable','error'); return; }
+
+  // Créer/réutiliser la modal
+  let modal = document.getElementById('edit-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'edit-modal';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:999;display:flex;align-items:center;justify-content:center;padding:16px';
+    document.body.appendChild(modal);
+  }
+
+  const pvR = v.prix_vente * (1 - v.promo_pourcent / 100);
+  const ben = (pvR - v.prix_achat) * v.quantite;
+  const marge = pvR > 0 ? (pvR - v.prix_achat) / pvR * 100 : 0;
+
+  modal.innerHTML = `
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:28px 32px;width:100%;max-width:680px;max-height:90vh;overflow-y:auto">
+      <div style="display:flex;align-items:center;margin-bottom:20px">
+        <h3 style="font-size:1.1rem">✏️ Modifier la vente <span style="color:var(--muted);font-weight:400">#${v.id}</span></h3>
+        <button onclick="document.getElementById('edit-modal').remove()" style="margin-left:auto;background:none;border:none;color:var(--muted);font-size:1.4rem;cursor:pointer;line-height:1">×</button>
+      </div>
+
+      <div id="edit-preview" style="background:var(--surface);border-radius:8px;padding:10px 14px;margin-bottom:18px;font-size:.85rem;display:flex;gap:20px;flex-wrap:wrap">
+        <span>Vente réelle : <strong id="ep-pvr">${eur(pvR)}</strong></span>
+        <span>Bénéfice : <strong id="ep-ben" class="${ben>=0?'text-green':'text-red'}">${eur(ben)}</strong></span>
+        <span>Marge : <strong id="ep-marge">${pct(marge)}</strong></span>
+      </div>
+
+      <form id="form-edit-vente">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Date</label>
+            <input type="date" name="date" value="${v.date}" required>
+          </div>
+          <div class="form-group" style="grid-column:span 2">
+            <label>Article</label>
+            <input type="text" name="article" value="${escHtml(v.article)}" required>
+          </div>
+          <div class="form-group">
+            <label>Catégorie</label>
+            <select name="categorie">
+              ${['haut','bas','robe','veste','accessoire','ensemble','autre'].map(c =>
+                `<option value="${c}" ${v.categorie===c?'selected':''}>${{haut:'Haut',bas:'Bas / Jupe / Pantalon',robe:'Robe',veste:'Veste / Manteau',accessoire:'Accessoire',ensemble:'Ensemble',autre:'Autre'}[c]}</option>`
+              ).join('')}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Canal</label>
+            <select name="canal_vente">
+              ${['instagram','vinted','site','presentiel','autre'].map(c =>
+                `<option value="${c}" ${v.canal_vente===c?'selected':''}>${{instagram:'Instagram',vinted:'Vinted',site:'Site web',presentiel:'Présentiel',autre:'Autre'}[c]}</option>`
+              ).join('')}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>💰 Prix d'achat (€)</label>
+            <input type="number" name="prix_achat" id="ep-pa" step="0.01" min="0" value="${v.prix_achat}" required
+              style="border-color:${v.prix_achat===0?'var(--accent3)':'var(--border)'}">
+          </div>
+          <div class="form-group">
+            <label>🏷️ Prix de vente (€)</label>
+            <input type="number" name="prix_vente" id="ep-pv" step="0.01" min="0" value="${v.prix_vente}" required>
+          </div>
+          <div class="form-group">
+            <label>Quantité</label>
+            <input type="number" name="quantite" id="ep-qty" min="1" value="${v.quantite}">
+          </div>
+          <div class="form-group">
+            <label>Promo (%)</label>
+            <input type="number" name="promo_pourcent" id="ep-promo" min="0" max="100" step="0.1" value="${v.promo_pourcent}">
+          </div>
+          <div class="form-group" style="grid-column:span 2">
+            <label>Notes</label>
+            <textarea name="notes">${escHtml(v.notes||'')}</textarea>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:12px;margin-top:20px">
+          <button type="submit" class="btn btn-primary">💾 Enregistrer</button>
+          <button type="button" class="btn btn-ghost" onclick="document.getElementById('edit-modal').remove()">Annuler</button>
+        </div>
+      </form>
+    </div>
+  `;
+
+  modal.style.display = 'flex';
+
+  // Preview temps réel
+  const updatePreview = () => {
+    const pa    = parseFloat(document.getElementById('ep-pa')?.value)    || 0;
+    const pv    = parseFloat(document.getElementById('ep-pv')?.value)    || 0;
+    const qty   = parseInt(document.getElementById('ep-qty')?.value)     || 1;
+    const promo = parseFloat(document.getElementById('ep-promo')?.value) || 0;
+    const pvR2  = pv * (1 - promo / 100);
+    const ben2  = (pvR2 - pa) * qty;
+    const m2    = pvR2 > 0 ? (pvR2 - pa) / pvR2 * 100 : 0;
+    const benEl = document.getElementById('ep-ben');
+    if (document.getElementById('ep-pvr'))  document.getElementById('ep-pvr').textContent  = eur(pvR2);
+    if (benEl) { benEl.textContent = eur(ben2); benEl.className = ben2>=0?'text-green':'text-red'; }
+    if (document.getElementById('ep-marge')) document.getElementById('ep-marge').textContent = pct(m2);
+  };
+  ['ep-pa','ep-pv','ep-qty','ep-promo'].forEach(id =>
+    document.getElementById(id)?.addEventListener('input', updatePreview)
+  );
+
+  // Fermer au clic en dehors
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+
+  // Soumettre
+  document.getElementById('form-edit-vente').addEventListener('submit', async e => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const body = Object.fromEntries(fd.entries());
+    body.prix_achat     = +body.prix_achat;
+    body.prix_vente     = +body.prix_vente;
+    body.quantite       = +body.quantite;
+    body.promo_pourcent = +body.promo_pourcent;
+
+    try {
+      await api(`api/ventes.php?id=${id}`, 'PUT', body);
+      toast('Vente mise à jour ✅','success');
+      modal.remove();
+      loadVentes();
+    } catch(err) { toast(err.message,'error'); }
+  });
 }
 
 async function deleteVente(id) {

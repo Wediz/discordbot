@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/db.php';
 header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET, POST, DELETE');
+header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE');
 header('Access-Control-Allow-Headers: Content-Type');
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') exit;
 
@@ -88,6 +88,36 @@ if ($method === 'POST') {
     }
 
     json_response(['id' => $id, 'emballages' => $emballagesUtilises], 201);
+}
+
+// PUT : modifier une vente existante
+if ($method === 'PUT') {
+    $id = (int)($_GET['id'] ?? 0);
+    if (!$id) json_response(['error' => 'ID manquant'], 400);
+
+    $d = input();
+    $ventes = readTable('ventes');
+    $found = false;
+
+    foreach ($ventes as &$v) {
+        if ($v['id'] !== $id) continue;
+        $found = true;
+        if (isset($d['date']))           $v['date']           = $d['date'];
+        if (isset($d['article']))        $v['article']        = $d['article'];
+        if (isset($d['categorie']))      $v['categorie']      = $d['categorie'];
+        if (isset($d['prix_achat']))     $v['prix_achat']     = (float)$d['prix_achat'];
+        if (isset($d['prix_vente']))     $v['prix_vente']     = (float)$d['prix_vente'];
+        if (isset($d['quantite']))       $v['quantite']       = (int)$d['quantite'];
+        if (isset($d['promo_pourcent'])) $v['promo_pourcent'] = (float)$d['promo_pourcent'];
+        if (isset($d['canal_vente']))    $v['canal_vente']    = $d['canal_vente'];
+        if (isset($d['notes']))          $v['notes']          = $d['notes'];
+        $v['updated_at'] = now_local();
+        break;
+    }
+
+    if (!$found) json_response(['error' => 'Vente introuvable'], 404);
+    writeTable('ventes', $ventes);
+    json_response(['ok' => true]);
 }
 
 if ($method === 'DELETE') {

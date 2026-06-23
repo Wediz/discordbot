@@ -1,0 +1,19 @@
+{
+  "name": "boutique-compta-bot",
+  "version": "1.0.0",
+  "description": "Bot Discord comptabilité boutique vêtements femme",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "deploy": "node src/deploy-commands.js"
+  },
+  "dependencies": {
+    "discord.js": "^14.15.3",
+    "better-sqlite3": "^9.4.3",
+    "chart.js": "^4.4.3",
+    "chartjs-node-canvas": "^4.1.6",
+    "date-fns": "^3.6.0",
+    "dotenv": "^16.4.5"
+  }
+}

@@ -1230,47 +1230,83 @@ registerPage('stock', async () => {
   document.getElementById('page-content').innerHTML = `
     <div class="page-header"><h2>🗃️ Mon Stock</h2></div>
 
-    <div class="card">
-      <div class="card-title"><span>➕</span> Ajouter un article acheté</div>
-      <form id="form-stock">
-        <div class="form-grid">
-          <div class="form-group">
-            <label>Date d'achat *</label>
-            <input type="date" name="date_achat" value="${today()}" required>
+    <div class="grid-2">
+      <!-- Ajout article unique -->
+      <div class="card">
+        <div class="card-title"><span>➕</span> Ajouter un article</div>
+        <form id="form-stock">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Date d'achat *</label>
+              <input type="date" name="date_achat" value="${today()}" required>
+            </div>
+            <div class="form-group" style="grid-column:span 2">
+              <label>Nom de l'article *</label>
+              <input type="text" name="article" placeholder="ex: Robe fleurie rose M" required autocomplete="off">
+            </div>
+            <div class="form-group">
+              <label>Catégorie</label>
+              <select name="categorie">
+                <option value="haut">Haut</option>
+                <option value="bas">Bas / Jupe / Pantalon</option>
+                <option value="robe">Robe</option>
+                <option value="veste">Veste / Manteau</option>
+                <option value="accessoire">Accessoire</option>
+                <option value="ensemble">Ensemble</option>
+                <option value="autre" selected>Autre</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>💰 Prix d'achat (€) *</label>
+              <input type="number" name="prix_achat" step="0.01" min="0" placeholder="0.00" required>
+            </div>
+            <div class="form-group">
+              <label>Quantité</label>
+              <input type="number" name="quantite" min="1" value="1">
+            </div>
+            <div class="form-group" style="grid-column:span 2">
+              <label>Notes</label>
+              <input type="text" name="notes_achat" placeholder="Fournisseur, taille, couleur…">
+            </div>
           </div>
-          <div class="form-group" style="grid-column:span 2">
-            <label>Nom de l'article *</label>
-            <input type="text" name="article" placeholder="ex: Robe fleurie rose M" required autocomplete="off">
+          <div class="mt-16">
+            <button type="submit" class="btn btn-primary">📦 Ajouter</button>
           </div>
-          <div class="form-group">
-            <label>Catégorie</label>
-            <select name="categorie">
-              <option value="haut">Haut</option>
-              <option value="bas">Bas / Jupe / Pantalon</option>
-              <option value="robe">Robe</option>
-              <option value="veste">Veste / Manteau</option>
-              <option value="accessoire">Accessoire</option>
-              <option value="ensemble">Ensemble</option>
-              <option value="autre" selected>Autre</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>💰 Prix d'achat (€) *</label>
-            <input type="number" name="prix_achat" step="0.01" min="0" placeholder="0.00" required>
-          </div>
-          <div class="form-group">
-            <label>Quantité</label>
-            <input type="number" name="quantite" min="1" value="1">
-          </div>
-          <div class="form-group" style="grid-column:span 2">
-            <label>Notes</label>
-            <input type="text" name="notes_achat" placeholder="Fournisseur, taille, couleur…">
-          </div>
+        </form>
+      </div>
+
+      <!-- Import rapide en masse -->
+      <div class="card">
+        <div class="card-title"><span>⚡</span> Import rapide — liste de commande</div>
+        <p style="font-size:.82rem;color:var(--muted);margin-bottom:12px">
+          Colle ta liste d'articles depuis Micro Store, Paris Fashion Shop ou n'importe où.<br>
+          <strong>Un article par ligne :</strong> <code style="background:var(--surface);padding:2px 6px;border-radius:4px;font-size:.8rem">Nom de l'article ; prix achat ; quantité</code>
+        </p>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:.78rem;color:var(--muted);line-height:1.8">
+          Exemples :<br>
+          <code>Robe fleurie rose ; 12.50 ; 2</code><br>
+          <code>Top blanc dentelle ; 8 ; 1</code><br>
+          <code>Ensemble pois noir ; 15.90 ; 3</code><br>
+          <span style="opacity:.7">→ Le séparateur peut être <strong>;</strong> ou <strong>,</strong> ou <strong>tab</strong></span>
         </div>
-        <div class="mt-16">
-          <button type="submit" class="btn btn-primary">📦 Ajouter au stock</button>
+        <div class="form-group">
+          <label>Date d'achat</label>
+          <input type="date" id="import-date" value="${today()}">
         </div>
-      </form>
+        <div class="form-group mt-8">
+          <label>Fournisseur (optionnel)</label>
+          <input type="text" id="import-fourn" placeholder="ex: Micro Store, Paris Fashion Shop…">
+        </div>
+        <div class="form-group mt-8">
+          <label>Ta liste *</label>
+          <textarea id="import-liste" rows="8" placeholder="Robe fleurie rose ; 12.50 ; 2&#10;Top blanc dentelle ; 8 ; 1&#10;Ensemble pois noir ; 15.90 ; 3" style="font-family:monospace;font-size:.82rem"></textarea>
+        </div>
+        <div id="import-preview" style="margin:10px 0;display:none"></div>
+        <div class="mt-8" style="display:flex;gap:8px">
+          <button class="btn btn-ghost" id="btn-preview-liste">👁 Prévisualiser</button>
+          <button class="btn btn-primary" id="btn-import-liste" disabled>📦 Tout importer</button>
+        </div>
+      </div>
     </div>
 
     <div class="card">
@@ -1314,6 +1350,98 @@ registerPage('stock', async () => {
       e.target.querySelector('[name=date_achat]').value = today();
       loadStock(filtreCourant);
     } catch(err) { toast(err.message, 'error'); }
+  });
+
+  // ── Import rapide ──
+  let parsedListe = [];
+
+  function parseListe() {
+    const texte  = document.getElementById('import-liste')?.value || '';
+    const fourn  = document.getElementById('import-fourn')?.value || '';
+    const date   = document.getElementById('import-date')?.value || today();
+    const lignes = texte.split('\n').map(l => l.trim()).filter(l => l);
+    parsedListe  = [];
+
+    for (const ligne of lignes) {
+      // Séparateurs : ; ou , ou tab
+      const parts = ligne.split(/[;,\t]/).map(p => p.trim());
+      if (parts.length < 2) continue;
+
+      const nom   = parts[0];
+      const prix  = parseFloat(parts[1].replace(',', '.'));
+      const qty   = parseInt(parts[2]) || 1;
+
+      if (!nom || isNaN(prix) || prix <= 0) continue;
+
+      parsedListe.push({
+        article:    nom,
+        prix_achat: prix,
+        quantite:   qty,
+        date_achat: date,
+        notes_achat: fourn || null,
+        categorie:  'autre',
+      });
+    }
+    return parsedListe;
+  }
+
+  document.getElementById('btn-preview-liste').addEventListener('click', () => {
+    const items = parseListe();
+    const prev  = document.getElementById('import-preview');
+    const btn   = document.getElementById('btn-import-liste');
+
+    if (!items.length) {
+      prev.style.display = 'block';
+      prev.innerHTML = `<div style="color:var(--danger);font-size:.82rem">⚠️ Aucune ligne reconnue. Format attendu : <code>Nom ; prix ; quantité</code></div>`;
+      btn.disabled = true;
+      return;
+    }
+
+    const totalPieces = items.reduce((s, i) => s + i.quantite, 0);
+    const totalInvesti = items.reduce((s, i) => s + i.prix_achat * i.quantite, 0);
+
+    prev.style.display = 'block';
+    prev.innerHTML = `
+      <div style="background:rgba(80,220,159,.08);border:1px solid rgba(80,220,159,.2);border-radius:8px;padding:10px 14px;margin-bottom:8px;font-size:.82rem">
+        ✅ <strong>${items.length} article(s)</strong> détecté(s) — <strong>${totalPieces} pièce(s)</strong> — Total investi : <strong class="text-orange">${eur(totalInvesti)}</strong>
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>#</th><th>Article</th><th class="td-right">Prix achat</th><th class="td-center">Qté</th><th class="td-right">Total</th></tr></thead>
+        <tbody>
+          ${items.map((it, i) => `<tr>
+            <td class="text-muted">${i+1}</td>
+            <td>${escHtml(it.article)}</td>
+            <td class="td-right text-orange fw-bold">${eur(it.prix_achat)}</td>
+            <td class="td-center">${it.quantite}</td>
+            <td class="td-right">${eur(it.prix_achat * it.quantite)}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table></div>
+    `;
+    btn.disabled = false;
+  });
+
+  document.getElementById('btn-import-liste').addEventListener('click', async () => {
+    if (!parsedListe.length) return;
+    const btn = document.getElementById('btn-import-liste');
+    btn.disabled = true;
+    btn.textContent = '⏳ Import en cours…';
+
+    let ok = 0, err = 0;
+    for (const item of parsedListe) {
+      try {
+        await api('api/stock.php', 'POST', item);
+        ok++;
+      } catch(e) { err++; }
+    }
+
+    toast(`${ok} article(s) ajouté(s) au stock ✅${err ? ` — ${err} erreur(s)` : ''}`, ok > 0 ? 'success' : 'error');
+    document.getElementById('import-liste').value  = '';
+    document.getElementById('import-preview').style.display = 'none';
+    btn.disabled  = true;
+    btn.textContent = '📦 Tout importer';
+    parsedListe = [];
+    loadStock(filtreCourant);
   });
 });
 

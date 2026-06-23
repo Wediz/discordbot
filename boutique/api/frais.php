@@ -5,12 +5,12 @@ header('Access-Control-Allow-Methods: GET, POST, DELETE');
 header('Access-Control-Allow-Headers: Content-Type');
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') exit;
 
-$db = getDB();
 $method = $_SERVER['REQUEST_METHOD'];
 
 if ($method === 'GET') {
-    $rows = $db->query("SELECT * FROM frais_divers ORDER BY date DESC, created_at DESC LIMIT 100")->fetchAll();
-    json_response($rows);
+    $rows = readTable('frais_divers');
+    usort($rows, fn($a,$b) => strcmp($b['date'].$b['created_at'], $a['date'].$a['created_at']));
+    json_response(array_values($rows));
 }
 
 if ($method === 'POST') {
@@ -18,14 +18,22 @@ if ($method === 'POST') {
     foreach (['date','categorie','description','montant'] as $r)
         if (empty($d[$r])) json_response(['error' => "Champ manquant: $r"], 400);
 
-    $stmt = $db->prepare("INSERT INTO frais_divers (date, categorie, description, montant) VALUES (?,?,?,?)");
-    $stmt->execute([$d['date'], $d['categorie'], $d['description'], $d['montant']]);
-    json_response(['id' => $db->lastInsertId()], 201);
+    $rows = readTable('frais_divers');
+    $rows[] = [
+        'id'          => nextId($rows),
+        'date'        => $d['date'],
+        'categorie'   => $d['categorie'],
+        'description' => $d['description'],
+        'montant'     => (float)$d['montant'],
+        'created_at'  => now_local(),
+    ];
+    writeTable('frais_divers', $rows);
+    json_response(['id' => end($rows)['id']], 201);
 }
 
 if ($method === 'DELETE') {
-    $id = $_GET['id'] ?? null;
+    $id = (int)($_GET['id'] ?? 0);
     if (!$id) json_response(['error' => 'ID manquant'], 400);
-    $db->prepare("DELETE FROM frais_divers WHERE id = ?")->execute([$id]);
+    writeTable('frais_divers', array_values(array_filter(readTable('frais_divers'), fn($f) => $f['id'] != $id)));
     json_response(['ok' => true]);
 }

@@ -5,37 +5,37 @@ header('Access-Control-Allow-Methods: GET, POST, DELETE');
 header('Access-Control-Allow-Headers: Content-Type');
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') exit;
 
-$db = getDB();
 $method = $_SERVER['REQUEST_METHOD'];
 
 if ($method === 'GET') {
-    $rows = $db->query("SELECT * FROM retours ORDER BY date DESC, created_at DESC LIMIT 100")->fetchAll();
-    json_response($rows);
+    $rows = readTable('retours');
+    usort($rows, fn($a,$b) => strcmp($b['date'].$b['created_at'], $a['date'].$a['created_at']));
+    json_response(array_values($rows));
 }
 
 if ($method === 'POST') {
     $d = input();
     foreach (['date','article','prix_vente','remboursement'] as $r)
-        if (empty($d[$r]) && $d[$r] !== 0) json_response(['error' => "Champ manquant: $r"], 400);
+        if (!isset($d[$r]) || $d[$r] === '') json_response(['error' => "Champ manquant: $r"], 400);
 
-    $stmt = $db->prepare("
-        INSERT INTO retours (vente_id, date, article, prix_vente, motif, remboursement)
-        VALUES (:vid, :date, :art, :pv, :motif, :remb)
-    ");
-    $stmt->execute([
-        ':vid'   => $d['vente_id'] ?? null,
-        ':date'  => $d['date'],
-        ':art'   => $d['article'],
-        ':pv'    => $d['prix_vente'],
-        ':motif' => $d['motif'] ?? 'Non précisé',
-        ':remb'  => $d['remboursement'],
-    ]);
-    json_response(['id' => $db->lastInsertId()], 201);
+    $rows = readTable('retours');
+    $rows[] = [
+        'id'            => nextId($rows),
+        'vente_id'      => $d['vente_id'] ? (int)$d['vente_id'] : null,
+        'date'          => $d['date'],
+        'article'       => $d['article'],
+        'prix_vente'    => (float)$d['prix_vente'],
+        'motif'         => $d['motif'] ?? 'Non précisé',
+        'remboursement' => (float)$d['remboursement'],
+        'created_at'    => now_local(),
+    ];
+    writeTable('retours', $rows);
+    json_response(['id' => end($rows)['id']], 201);
 }
 
 if ($method === 'DELETE') {
-    $id = $_GET['id'] ?? null;
+    $id = (int)($_GET['id'] ?? 0);
     if (!$id) json_response(['error' => 'ID manquant'], 400);
-    $db->prepare("DELETE FROM retours WHERE id = ?")->execute([$id]);
+    writeTable('retours', array_values(array_filter(readTable('retours'), fn($r) => $r['id'] != $id)));
     json_response(['ok' => true]);
 }

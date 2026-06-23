@@ -5,17 +5,27 @@ header('Access-Control-Allow-Methods: GET, POST, DELETE');
 header('Access-Control-Allow-Headers: Content-Type');
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') exit;
 
-$db = getDB();
 $method = $_SERVER['REQUEST_METHOD'];
 
 if ($method === 'GET') {
-    $rows = $db->query("
-        SELECT e.*,
-               COALESCE((SELECT SUM(fev.quantite_utilisee) FROM frais_emballage_vente fev WHERE fev.emballage_id = e.id),0) as total_utilise,
-               COALESCE((SELECT SUM(fev.cout) FROM frais_emballage_vente fev WHERE fev.emballage_id = e.id),0) as cout_total_utilise
-        FROM emballages e ORDER BY created_at DESC
-    ")->fetchAll();
-    json_response($rows);
+    $embs = readTable('emballages');
+    $fevs = readTable('frais_emballage_vente');
+
+    // Calculer stats d'utilisation
+    $utilise = [];
+    foreach ($fevs as $f) {
+        $eid = $f['emballage_id'];
+        $utilise[$eid]['qty']  = ($utilise[$eid]['qty']  ?? 0) + $f['quantite_utilisee'];
+        $utilise[$eid]['cout'] = ($utilise[$eid]['cout'] ?? 0) + $f['cout'];
+    }
+
+    $result = array_map(fn($e) => array_merge($e, [
+        'total_utilise'       => $utilise[$e['id']]['qty']  ?? 0,
+        'cout_total_utilise'  => $utilise[$e['id']]['cout'] ?? 0,
+    ]), $embs);
+
+    usort($result, fn($a,$b) => strcmp($b['created_at'], $a['created_at']));
+    json_response(array_values($result));
 }
 
 if ($method === 'POST') {
@@ -23,27 +33,30 @@ if ($method === 'POST') {
     foreach (['date','type','quantite_achetee','prix_total'] as $r)
         if (empty($d[$r])) json_response(['error' => "Champ manquant: $r"], 400);
 
-    $pu = round($d['prix_total'] / $d['quantite_achetee'], 6);
+    $qty = (int)$d['quantite_achetee'];
+    $pt  = (float)$d['prix_total'];
+    $pu  = round($pt / $qty, 6);
 
-    $stmt = $db->prepare("
-        INSERT INTO emballages (date, type, quantite_achetee, prix_total, prix_unitaire, stock_restant)
-        VALUES (:date, :type, :qty, :pt, :pu, :stock)
-    ");
-    $stmt->execute([
-        ':date'  => $d['date'],
-        ':type'  => $d['type'],
-        ':qty'   => $d['quantite_achetee'],
-        ':pt'    => $d['prix_total'],
-        ':pu'    => $pu,
-        ':stock' => $d['quantite_achetee'],
-    ]);
-    json_response(['id' => $db->lastInsertId(), 'prix_unitaire' => $pu], 201);
+    $embs = readTable('emballages');
+    $id   = nextId($embs);
+    $embs[] = [
+        'id'               => $id,
+        'date'             => $d['date'],
+        'type'             => $d['type'],
+        'quantite_achetee' => $qty,
+        'prix_total'       => $pt,
+        'prix_unitaire'    => $pu,
+        'stock_restant'    => $qty,
+        'created_at'       => now_local(),
+    ];
+    writeTable('emballages', $embs);
+    json_response(['id' => $id, 'prix_unitaire' => $pu], 201);
 }
 
 if ($method === 'DELETE') {
-    $id = $_GET['id'] ?? null;
+    $id = (int)($_GET['id'] ?? 0);
     if (!$id) json_response(['error' => 'ID manquant'], 400);
-    $db->prepare("DELETE FROM frais_emballage_vente WHERE emballage_id = ?")->execute([$id]);
-    $db->prepare("DELETE FROM emballages WHERE id = ?")->execute([$id]);
+    writeTable('frais_emballage_vente', array_values(array_filter(readTable('frais_emballage_vente'), fn($f) => $f['emballage_id'] != $id)));
+    writeTable('emballages', array_values(array_filter(readTable('emballages'), fn($e) => $e['id'] != $id)));
     json_response(['ok' => true]);
 }

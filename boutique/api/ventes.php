@@ -5,105 +5,111 @@ header('Access-Control-Allow-Methods: GET, POST, DELETE');
 header('Access-Control-Allow-Headers: Content-Type');
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') exit;
 
-$db = getDB();
 $method = $_SERVER['REQUEST_METHOD'];
 
 if ($method === 'GET') {
-    $limit  = (int)($_GET['limit'] ?? 50);
-    $offset = (int)($_GET['offset'] ?? 0);
-    $search = $_GET['search'] ?? '';
+    $rows   = readTable('ventes');
+    $search = strtolower($_GET['search'] ?? '');
     $debut  = $_GET['debut'] ?? '';
-    $fin    = $_GET['fin'] ?? '';
+    $fin    = $_GET['fin']   ?? '';
 
-    $where = [];
-    $params = [];
+    if ($search) $rows = array_filter($rows, fn($v) =>
+        str_contains(strtolower($v['article']), $search) ||
+        str_contains(strtolower($v['categorie'] ?? ''), $search) ||
+        str_contains(strtolower($v['canal_vente'] ?? ''), $search)
+    );
+    if ($debut) $rows = array_filter($rows, fn($v) => $v['date'] >= $debut);
+    if ($fin)   $rows = array_filter($rows, fn($v) => $v['date'] <= $fin);
 
-    if ($search) {
-        $where[] = "(article LIKE :s OR categorie LIKE :s OR canal_vente LIKE :s)";
-        $params[':s'] = "%$search%";
-    }
-    if ($debut) { $where[] = "date >= :debut"; $params[':debut'] = $debut; }
-    if ($fin)   { $where[] = "date <= :fin";   $params[':fin']   = $fin; }
+    // Tri décroissant par date
+    $rows = array_values($rows);
+    usort($rows, fn($a,$b) => strcmp($b['date'].$b['created_at'], $a['date'].$a['created_at']));
 
-    $sql = "SELECT * FROM ventes" . ($where ? " WHERE " . implode(" AND ", $where) : "") .
-           " ORDER BY date DESC, created_at DESC LIMIT :lim OFFSET :off";
+    $limit  = (int)($_GET['limit']  ?? 100);
+    $offset = (int)($_GET['offset'] ?? 0);
+    $total  = count($rows);
+    $rows   = array_slice($rows, $offset, $limit);
 
-    $stmt = $db->prepare($sql);
-    foreach ($params as $k => $v) $stmt->bindValue($k, $v);
-    $stmt->bindValue(':lim', $limit, PDO::PARAM_INT);
-    $stmt->bindValue(':off', $offset, PDO::PARAM_INT);
-    $stmt->execute();
-    $rows = $stmt->fetchAll();
-
-    $total = $db->prepare("SELECT COUNT(*) FROM ventes" . ($where ? " WHERE " . implode(" AND ", $where) : ""));
-    foreach ($params as $k => $v) $total->bindValue($k, $v);
-    $total->execute();
-
-    json_response(['data' => $rows, 'total' => (int)$total->fetchColumn()]);
+    json_response(['data' => $rows, 'total' => $total]);
 }
 
 if ($method === 'POST') {
     $d = input();
-    $required = ['date','article','prix_achat','prix_vente'];
-    foreach ($required as $r) {
+    foreach (['date','article','prix_achat','prix_vente'] as $r)
         if (empty($d[$r])) json_response(['error' => "Champ manquant: $r"], 400);
-    }
 
-    $prixVenteReel = $d['prix_vente'] * (1 - ($d['promo_pourcent'] ?? 0) / 100);
+    $ventes = readTable('ventes');
+    $id = nextId($ventes);
 
-    $stmt = $db->prepare("
-        INSERT INTO ventes (date, article, categorie, prix_achat, prix_vente, quantite, promo_pourcent, canal_vente, notes)
-        VALUES (:date, :article, :cat, :pa, :pv, :qty, :promo, :canal, :notes)
-    ");
-    $stmt->execute([
-        ':date'    => $d['date'],
-        ':article' => $d['article'],
-        ':cat'     => $d['categorie'] ?? 'autre',
-        ':pa'      => $d['prix_achat'],
-        ':pv'      => $d['prix_vente'],
-        ':qty'     => $d['quantite'] ?? 1,
-        ':promo'   => $d['promo_pourcent'] ?? 0,
-        ':canal'   => $d['canal_vente'] ?? 'instagram',
-        ':notes'   => $d['notes'] ?? null,
-    ]);
-    $venteId = $db->lastInsertId();
+    $vente = [
+        'id'            => $id,
+        'date'          => $d['date'],
+        'article'       => $d['article'],
+        'categorie'     => $d['categorie']     ?? 'autre',
+        'prix_achat'    => (float)$d['prix_achat'],
+        'prix_vente'    => (float)$d['prix_vente'],
+        'quantite'      => (int)($d['quantite']       ?? 1),
+        'promo_pourcent'=> (float)($d['promo_pourcent'] ?? 0),
+        'canal_vente'   => $d['canal_vente']   ?? 'instagram',
+        'notes'         => $d['notes']         ?? null,
+        'created_at'    => now_local(),
+    ];
+    $ventes[] = $vente;
+    writeTable('ventes', $ventes);
 
     // Associer emballages
     $emballagesUtilises = [];
     if (!empty($d['emballages'])) {
+        $embs = readTable('emballages');
+        $fevs = readTable('frais_emballage_vente');
+
         foreach ($d['emballages'] as $emb) {
-            $row = $db->prepare("SELECT * FROM emballages WHERE id = ? AND stock_restant > 0");
-            $row->execute([$emb['id']]);
-            $e = $row->fetch();
-            if (!$e) continue;
+            $idx = null;
+            foreach ($embs as $i => $e) {
+                if ($e['id'] == $emb['id'] && $e['stock_restant'] > 0) { $idx = $i; break; }
+            }
+            if ($idx === null) continue;
 
-            $qty = (int)($emb['quantite'] ?? 1);
-            $cout = $e['prix_unitaire'] * $qty;
-            $db->prepare("INSERT INTO frais_emballage_vente (vente_id, emballage_id, quantite_utilisee, cout) VALUES (?,?,?,?)")
-               ->execute([$venteId, $e['id'], $qty, $cout]);
-            $db->prepare("UPDATE emballages SET stock_restant = stock_restant - ? WHERE id = ?")
-               ->execute([$qty, $e['id']]);
+            $qty  = (int)($emb['quantite'] ?? 1);
+            $cout = round($embs[$idx]['prix_unitaire'] * $qty, 6);
 
-            $emballagesUtilises[] = ['type' => $e['type'], 'cout' => $cout];
+            $fevs[] = [
+                'id'               => nextId($fevs),
+                'vente_id'         => $id,
+                'emballage_id'     => $embs[$idx]['id'],
+                'quantite_utilisee'=> $qty,
+                'cout'             => $cout,
+            ];
+            $embs[$idx]['stock_restant'] -= $qty;
+            $emballagesUtilises[] = ['type' => $embs[$idx]['type'], 'cout' => $cout];
         }
+        writeTable('emballages', $embs);
+        writeTable('frais_emballage_vente', $fevs);
     }
 
-    json_response(['id' => $venteId, 'emballages' => $emballagesUtilises], 201);
+    json_response(['id' => $id, 'emballages' => $emballagesUtilises], 201);
 }
 
 if ($method === 'DELETE') {
-    $id = $_GET['id'] ?? null;
+    $id = (int)($_GET['id'] ?? 0);
     if (!$id) json_response(['error' => 'ID manquant'], 400);
 
     // Restituer stock emballages
-    $embs = $db->prepare("SELECT * FROM frais_emballage_vente WHERE vente_id = ?");
-    $embs->execute([$id]);
-    foreach ($embs->fetchAll() as $fe) {
-        $db->prepare("UPDATE emballages SET stock_restant = stock_restant + ? WHERE id = ?")
-           ->execute([$fe['quantite_utilisee'], $fe['emballage_id']]);
+    $fevs = readTable('frais_emballage_vente');
+    $embs = readTable('emballages');
+    foreach ($fevs as $fe) {
+        if ($fe['vente_id'] == $id) {
+            foreach ($embs as &$e) {
+                if ($e['id'] == $fe['emballage_id']) {
+                    $e['stock_restant'] += $fe['quantite_utilisee'];
+                    break;
+                }
+            }
+        }
     }
-    $db->prepare("DELETE FROM frais_emballage_vente WHERE vente_id = ?")->execute([$id]);
-    $db->prepare("DELETE FROM ventes WHERE id = ?")->execute([$id]);
+    writeTable('emballages', $embs);
+    writeTable('frais_emballage_vente', array_values(array_filter($fevs, fn($f) => $f['vente_id'] != $id)));
+    writeTable('ventes', array_values(array_filter(readTable('ventes'), fn($v) => $v['id'] != $id)));
 
     json_response(['ok' => true]);
 }

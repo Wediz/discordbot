@@ -10,7 +10,11 @@ set_exception_handler(function (Throwable $e) {
     exit;
 });
 set_error_handler(function (int $errno, string $errstr) {
-    throw new ErrorException($errstr, $errno);
+    // Laisser passer les notices et dépréciations, ne lever que les vraies erreurs
+    if ($errno & (E_ERROR | E_PARSE | E_CORE_ERROR | E_COMPILE_ERROR | E_USER_ERROR)) {
+        throw new ErrorException($errstr, $errno);
+    }
+    return false; // comportement PHP par défaut pour le reste
 });
 
 function dataFile(string $table): string {

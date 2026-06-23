@@ -1089,6 +1089,163 @@ registerPage('fiscal', async () => {
   await calc();
 });
 
+// ── Import Shopify ───────────────────────────────────────────────
+registerPage('import', () => {
+  document.getElementById('page-content').innerHTML = `
+    <div class="page-header"><h2>📥 Import Shopify CSV</h2></div>
+
+    <div class="card" style="max-width:640px">
+      <div class="card-title"><span>📂</span> Importer l'export Shopify</div>
+      <p style="font-size:.85rem;color:var(--muted);margin-bottom:16px">
+        Exporte tes commandes depuis Shopify → <strong>Admin → Commandes → Exporter → Toutes les commandes (CSV)</strong><br>
+        Les prix d'achat seront à renseigner après l'import (Shopify ne les stocke pas).
+      </p>
+
+      <form id="form-import">
+        <div class="form-group">
+          <label>Fichier CSV Shopify *</label>
+          <input type="file" name="csv" accept=".csv,text/csv" required id="csv-input"
+            style="background:var(--surface);border:1px dashed var(--accent);border-radius:8px;color:var(--text);padding:12px;cursor:pointer;width:100%">
+        </div>
+        <div class="mt-16 flex gap-8">
+          <button type="submit" class="btn btn-primary">🚀 Importer</button>
+        </div>
+      </form>
+
+      <div id="import-progress" style="display:none;margin-top:16px">
+        <div class="loader"></div>
+        <p style="text-align:center;color:var(--muted);margin-top:8px;font-size:.85rem">Traitement en cours…</p>
+      </div>
+    </div>
+
+    <div id="import-result" style="display:none">
+      <div class="card" id="import-summary"></div>
+      <div class="card" id="import-prix-achat" style="display:none">
+        <div class="card-title"><span>🏷️</span> Renseigner les prix d'achat</div>
+        <p style="font-size:.82rem;color:var(--muted);margin-bottom:16px">
+          Ces articles ont été importés avec un prix d'achat à <strong>0 €</strong>.<br>
+          Remplis tes prix d'achat réels pour avoir des statistiques de bénéfice correctes.
+        </p>
+        <div id="prix-achat-list"></div>
+        <div class="mt-16 flex gap-8">
+          <button class="btn btn-success" id="btn-save-pa">💾 Enregistrer les prix d'achat</button>
+          <button class="btn btn-ghost" id="btn-skip-pa">Ignorer pour l'instant</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('form-import').addEventListener('submit', async e => {
+    e.preventDefault();
+    const file = document.getElementById('csv-input').files[0];
+    if (!file) return;
+
+    document.getElementById('import-progress').style.display = 'block';
+    document.getElementById('import-result').style.display = 'none';
+    e.target.querySelector('button').disabled = true;
+
+    const fd = new FormData();
+    fd.append('csv', file);
+
+    try {
+      const r = await fetch('api/import_shopify.php', { method: 'POST', body: fd });
+      const data = await r.json();
+      if (data.error) throw new Error(data.error);
+
+      document.getElementById('import-progress').style.display = 'none';
+      document.getElementById('import-result').style.display = 'block';
+
+      // Résumé
+      const summary = document.getElementById('import-summary');
+      summary.innerHTML = `
+        <div class="card-title"><span>✅</span> Import terminé</div>
+        <div class="kpi-grid" style="margin-bottom:0">
+          <div class="kpi-card green">
+            <div class="kpi-label">Articles importés</div>
+            <div class="kpi-value">${data.imported}</div>
+          </div>
+          <div class="kpi-card red">
+            <div class="kpi-label">Retours importés</div>
+            <div class="kpi-value">${data.retours}</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Ignorés (doublons…)</div>
+            <div class="kpi-value">${data.skipped}</div>
+          </div>
+        </div>
+        ${data.errors?.length ? `<div style="margin-top:12px;font-size:.8rem;color:var(--danger)">${data.errors.map(escHtml).join('<br>')}</div>` : ''}
+      `;
+
+      // Tableau prix d'achat
+      const arts = data.articles_uniques || [];
+      if (arts.length > 0) {
+        document.getElementById('import-prix-achat').style.display = 'block';
+        const list = document.getElementById('prix-achat-list');
+        list.innerHTML = `
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+            <button class="btn btn-ghost btn-sm" id="btn-autofill">✨ Remplir auto (% du prix vente)</button>
+            <input type="number" id="auto-pct" value="40" min="1" max="99" step="1"
+              style="width:70px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:5px 8px;font-size:.82rem">
+            <span style="font-size:.8rem;color:var(--muted)">% du prix de vente</span>
+          </div>
+          <div class="table-wrap"><table>
+            <thead><tr>
+              <th>Article</th>
+              <th class="td-right">Prix vente moy.</th>
+              <th class="td-right">Qté importée</th>
+              <th class="td-right" style="min-width:130px">Prix d'achat (€)</th>
+            </tr></thead>
+            <tbody>
+              ${arts.map(a => `<tr>
+                <td>${escHtml(a.article)}</td>
+                <td class="td-right">${eur(a.prix_vente_moyen)}</td>
+                <td class="td-center">${a.nb}</td>
+                <td class="td-right">
+                  <input type="number" class="pa-input" data-article="${escHtml(a.article)}"
+                    value="${a.prix_achat || ''}" min="0" step="0.01" placeholder="0.00"
+                    style="width:110px;background:var(--surface);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:5px 8px;font-size:.85rem;text-align:right">
+                </td>
+              </tr>`).join('')}
+            </tbody>
+          </table></div>
+        `;
+
+        document.getElementById('btn-autofill').addEventListener('click', () => {
+          const pct2 = +document.getElementById('auto-pct').value / 100;
+          document.querySelectorAll('.pa-input').forEach(inp => {
+            const tr = inp.closest('tr');
+            const pvCell = tr.querySelector('td:nth-child(2)');
+            const pv = arts.find(a => a.article === inp.dataset.article)?.prix_vente_moyen || 0;
+            inp.value = (pv * pct2).toFixed(2);
+          });
+        });
+
+        document.getElementById('btn-save-pa').addEventListener('click', async () => {
+          const map = {};
+          document.querySelectorAll('.pa-input').forEach(inp => {
+            if (inp.value !== '') map[inp.dataset.article] = +inp.value;
+          });
+          try {
+            const r2 = await api('api/import_shopify.php', 'POST', { prix_achat_map: map });
+            toast(`${r2.updated} articles mis à jour ✅`, 'success');
+            document.getElementById('import-prix-achat').style.display = 'none';
+          } catch(err) { toast(err.message, 'error'); }
+        });
+
+        document.getElementById('btn-skip-pa').addEventListener('click', () => {
+          document.getElementById('import-prix-achat').style.display = 'none';
+        });
+      }
+
+      toast(`${data.imported} articles importés avec succès`, 'success');
+    } catch(err) {
+      document.getElementById('import-progress').style.display = 'none';
+      toast(err.message, 'error');
+    }
+    e.target.querySelector('button').disabled = false;
+  });
+});
+
 // ── Helpers ───────────────────────────────────────────────────────
 function escHtml(s) {
   return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');

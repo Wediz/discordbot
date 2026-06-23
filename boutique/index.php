@@ -33,6 +33,9 @@
     </a>
 
     <div class="nav-section">Enregistrer</div>
+    <a class="nav-link" data-page="import">
+      <span class="icon">📥</span> Import Shopify
+    </a>
     <a class="nav-link" data-page="ventes">
       <span class="icon">🛍️</span> Ventes
     </a>

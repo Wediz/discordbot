@@ -1225,6 +1225,375 @@ registerPage('fiscal', async () => {
   await calc();
 });
 
+// ── Stock / Inventaire ───────────────────────────────────────────
+registerPage('stock', async () => {
+  document.getElementById('page-content').innerHTML = `
+    <div class="page-header"><h2>🗃️ Mon Stock</h2></div>
+
+    <div class="card">
+      <div class="card-title"><span>➕</span> Ajouter un article acheté</div>
+      <form id="form-stock">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Date d'achat *</label>
+            <input type="date" name="date_achat" value="${today()}" required>
+          </div>
+          <div class="form-group" style="grid-column:span 2">
+            <label>Nom de l'article *</label>
+            <input type="text" name="article" placeholder="ex: Robe fleurie rose M" required autocomplete="off">
+          </div>
+          <div class="form-group">
+            <label>Catégorie</label>
+            <select name="categorie">
+              <option value="haut">Haut</option>
+              <option value="bas">Bas / Jupe / Pantalon</option>
+              <option value="robe">Robe</option>
+              <option value="veste">Veste / Manteau</option>
+              <option value="accessoire">Accessoire</option>
+              <option value="ensemble">Ensemble</option>
+              <option value="autre" selected>Autre</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>💰 Prix d'achat (€) *</label>
+            <input type="number" name="prix_achat" step="0.01" min="0" placeholder="0.00" required>
+          </div>
+          <div class="form-group">
+            <label>Quantité</label>
+            <input type="number" name="quantite" min="1" value="1">
+          </div>
+          <div class="form-group" style="grid-column:span 2">
+            <label>Notes</label>
+            <input type="text" name="notes_achat" placeholder="Fournisseur, taille, couleur…">
+          </div>
+        </div>
+        <div class="mt-16">
+          <button type="submit" class="btn btn-primary">📦 Ajouter au stock</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+        <div class="card-title" style="margin-bottom:0"><span>📋</span> Inventaire</div>
+        <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-ghost btn-sm filtre-btn active" data-f="tout">Tout</button>
+          <button class="btn btn-ghost btn-sm filtre-btn" data-f="dispo">🟢 En stock</button>
+          <button class="btn btn-ghost btn-sm filtre-btn" data-f="vendu">✅ Vendus</button>
+          <input type="text" id="stock-search" placeholder="Rechercher…"
+            style="background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:6px 10px;font-size:.82rem;outline:none;width:160px">
+        </div>
+      </div>
+      <div id="stock-kpi" style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px"></div>
+      <div id="table-stock"><div class="loader"></div></div>
+    </div>
+  `;
+
+  let filtreCourant = 'tout';
+  loadStock(filtreCourant);
+
+  document.querySelectorAll('.filtre-btn').forEach(btn => btn.addEventListener('click', () => {
+    document.querySelectorAll('.filtre-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    filtreCourant = btn.dataset.f;
+    loadStock(filtreCourant);
+  }));
+
+  document.getElementById('stock-search').addEventListener('input', () => loadStock(filtreCourant));
+
+  document.getElementById('form-stock').addEventListener('submit', async e => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const body = Object.fromEntries(fd.entries());
+    body.prix_achat = +body.prix_achat;
+    body.quantite   = +body.quantite;
+    try {
+      const r = await api('api/stock.php', 'POST', body);
+      toast(`${r.nb} article(s) ajouté(s) au stock ✅`, 'success');
+      e.target.reset();
+      e.target.querySelector('[name=date_achat]').value = today();
+      loadStock(filtreCourant);
+    } catch(err) { toast(err.message, 'error'); }
+  });
+});
+
+async function loadStock(filtre = 'tout') {
+  const wrap = document.getElementById('table-stock');
+  const kpi  = document.getElementById('stock-kpi');
+  if (!wrap) return;
+  wrap.innerHTML = '<div class="loader"></div>';
+
+  try {
+    const all    = await api('api/stock.php?filtre=tout');
+    const search = (document.getElementById('stock-search')?.value || '').toLowerCase();
+
+    // KPIs
+    const dispo   = all.filter(a => a.statut === 'disponible');
+    const vendus  = all.filter(a => a.statut === 'vendu');
+    const valStock= dispo.reduce((s,a) => s + a.prix_achat, 0);
+    const benTotal= vendus.reduce((s,a) => {
+      const pvR = (a.prix_vente||0) * (1-(a.promo_pourcent||0)/100);
+      return s + (pvR - a.prix_achat);
+    }, 0);
+
+    if (kpi) kpi.innerHTML = `
+      <div class="kpi-card" style="flex:1;min-width:140px">
+        <div class="kpi-label">En stock</div>
+        <div class="kpi-value text-orange">${dispo.length}</div>
+        <div class="kpi-sub">Investi: ${eur(valStock)}</div>
+      </div>
+      <div class="kpi-card" style="flex:1;min-width:140px">
+        <div class="kpi-label">Vendus</div>
+        <div class="kpi-value text-green">${vendus.length}</div>
+        <div class="kpi-sub">/ ${all.length} total</div>
+      </div>
+      <div class="kpi-card" style="flex:1;min-width:140px">
+        <div class="kpi-label">Bénéfice réalisé</div>
+        <div class="kpi-value ${benTotal>=0?'text-green':'text-red'}">${eur(benTotal)}</div>
+        <div class="kpi-sub">Sur articles vendus</div>
+      </div>
+    `;
+
+    // Filtre + recherche
+    let rows = all;
+    if (filtre === 'dispo') rows = rows.filter(a => a.statut === 'disponible');
+    if (filtre === 'vendu') rows = rows.filter(a => a.statut === 'vendu');
+    if (search) rows = rows.filter(a =>
+      a.article.toLowerCase().includes(search) ||
+      (a.categorie||'').toLowerCase().includes(search)
+    );
+
+    window._stockData = all;
+
+    if (!rows.length) {
+      wrap.innerHTML = '<div class="empty"><div class="empty-icon">🗃️</div><p>Aucun article</p></div>';
+      return;
+    }
+
+    wrap.innerHTML = `<div class="table-wrap"><table>
+      <thead><tr>
+        <th>Date achat</th><th>Article</th><th>Cat.</th>
+        <th class="td-right">Prix achat</th><th>Statut</th>
+        <th class="td-right">Prix vente</th><th class="td-right">Bénéfice</th>
+        <th class="td-right">Marge</th><th>Canal</th><th>Date vente</th>
+        <th></th>
+      </tr></thead>
+      <tbody>
+        ${rows.map(a => {
+          const pvR  = a.statut === 'vendu' ? (a.prix_vente||0)*(1-(a.promo_pourcent||0)/100) : null;
+          const ben  = pvR !== null ? pvR - a.prix_achat : null;
+          const marg = pvR > 0 ? (pvR - a.prix_achat)/pvR*100 : null;
+          return `<tr>
+            <td>${a.date_achat}</td>
+            <td>
+              <strong>${escHtml(a.article)}</strong>
+              ${a.notes_achat ? `<br><small class="text-muted">${escHtml(a.notes_achat)}</small>` : ''}
+            </td>
+            <td><span class="tag tag-purple">${a.categorie}</span></td>
+            <td class="td-right fw-bold">${eur(a.prix_achat)}</td>
+            <td>${a.statut === 'disponible'
+              ? '<span class="tag tag-green">🟢 En stock</span>'
+              : '<span class="tag tag-blue">✅ Vendu</span>'}</td>
+            <td class="td-right">${pvR !== null ? eur(pvR) : '—'}</td>
+            <td class="td-right fw-bold ${ben===null?'text-muted':ben>=0?'text-green':'text-red'}">${ben!==null?eur(ben):'—'}</td>
+            <td class="td-right">${marg!==null?pct(marg):'—'}</td>
+            <td>${a.canal_vente ? `<span class="tag tag-blue">${a.canal_vente}</span>` : '—'}</td>
+            <td>${a.date_vente||'—'}</td>
+            <td style="display:flex;gap:4px">
+              ${a.statut === 'disponible'
+                ? `<button class="btn btn-success btn-sm" onclick="vendreArticle(${a.id})">💰 Vendre</button>`
+                : `<button class="btn btn-ghost btn-sm btn-icon" onclick="remettreEnStock(${a.id})" title="Remettre en stock">↩️</button>`}
+              <button class="btn btn-ghost btn-sm btn-icon" onclick="editStock(${a.id})" title="Modifier">✏️</button>
+              <button class="btn btn-danger btn-sm btn-icon" onclick="deleteStock(${a.id})" title="Supprimer">🗑</button>
+            </td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table></div>`;
+  } catch(err) {
+    wrap.innerHTML = `<div class="empty"><p>${err.message}</p></div>`;
+  }
+}
+
+function vendreArticle(id) {
+  const a = (window._stockData || []).find(x => x.id === id);
+  if (!a) return;
+
+  let modal = document.getElementById('vendre-modal');
+  if (!modal) { modal = document.createElement('div'); modal.id = 'vendre-modal'; document.body.appendChild(modal); }
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:999;display:flex;align-items:center;justify-content:center;padding:16px';
+
+  modal.innerHTML = `
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:28px 32px;width:100%;max-width:460px">
+      <div style="display:flex;align-items:center;margin-bottom:20px">
+        <h3>💰 Marquer comme vendu</h3>
+        <button onclick="document.getElementById('vendre-modal').remove()" style="margin-left:auto;background:none;border:none;color:var(--muted);font-size:1.4rem;cursor:pointer">×</button>
+      </div>
+      <div style="background:var(--surface);border-radius:8px;padding:10px 14px;margin-bottom:18px;font-size:.85rem">
+        <strong>${escHtml(a.article)}</strong><br>
+        <span class="text-muted">Acheté le ${a.date_achat} — Prix d'achat : ${eur(a.prix_achat)}</span>
+      </div>
+      <div id="vendre-preview" style="background:rgba(80,220,159,.08);border:1px solid rgba(80,220,159,.2);border-radius:8px;padding:10px 14px;margin-bottom:18px;font-size:.85rem;display:none">
+        Bénéfice : <strong id="vp-ben"></strong> — Marge : <strong id="vp-marge"></strong>
+      </div>
+      <form id="form-vendre">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Date de vente *</label>
+            <input type="date" name="date" value="${today()}" required>
+          </div>
+          <div class="form-group">
+            <label>Canal</label>
+            <select name="canal_vente">
+              <option value="instagram">Instagram</option>
+              <option value="vinted">Vinted</option>
+              <option value="site">Site web</option>
+              <option value="presentiel">Présentiel</option>
+              <option value="autre">Autre</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>💰 Prix de vente (€) *</label>
+            <input type="number" name="prix_vente" id="vp-pv" step="0.01" min="0" placeholder="0.00" required autofocus>
+          </div>
+          <div class="form-group">
+            <label>Promo (%)</label>
+            <input type="number" name="promo_pourcent" id="vp-promo" min="0" max="100" step="0.1" value="0">
+          </div>
+          <div class="form-group" style="grid-column:span 2">
+            <label>Notes</label>
+            <input type="text" name="notes" placeholder="Optionnel">
+          </div>
+        </div>
+        <div style="display:flex;gap:12px;margin-top:20px">
+          <button type="submit" class="btn btn-success">✅ Confirmer la vente</button>
+          <button type="button" class="btn btn-ghost" onclick="document.getElementById('vendre-modal').remove()">Annuler</button>
+        </div>
+      </form>
+    </div>
+  `;
+
+  const updatePreview = () => {
+    const pv    = parseFloat(document.getElementById('vp-pv')?.value) || 0;
+    const promo = parseFloat(document.getElementById('vp-promo')?.value) || 0;
+    const pvR   = pv * (1 - promo/100);
+    const ben   = pvR - a.prix_achat;
+    const marg  = pvR > 0 ? ben/pvR*100 : 0;
+    const prev  = document.getElementById('vendre-preview');
+    if (pv > 0 && prev) {
+      prev.style.display = 'block';
+      prev.style.borderColor = ben>=0 ? 'rgba(80,220,159,.3)' : 'rgba(255,107,107,.3)';
+      prev.style.background  = ben>=0 ? 'rgba(80,220,159,.08)' : 'rgba(255,107,107,.08)';
+      document.getElementById('vp-ben').textContent   = eur(ben);
+      document.getElementById('vp-ben').className     = ben>=0 ? 'text-green' : 'text-red';
+      document.getElementById('vp-marge').textContent = pct(marg);
+    }
+  };
+  document.getElementById('vp-pv')?.addEventListener('input', updatePreview);
+  document.getElementById('vp-promo')?.addEventListener('input', updatePreview);
+
+  document.getElementById('form-vendre').addEventListener('submit', async e => {
+    e.preventDefault();
+    const fd   = new FormData(e.target);
+    const body = Object.fromEntries(fd.entries());
+    body.action        = 'vendre';
+    body.id            = id;
+    body.prix_vente    = +body.prix_vente;
+    body.promo_pourcent= +body.promo_pourcent;
+    try {
+      const r = await api('api/stock.php', 'POST', body);
+      toast(`Vendu ! Bénéfice : ${eur(r.benefice)} (${pct(r.marge)}) ✅`, 'success');
+      modal.remove();
+      loadStock(document.querySelector('.filtre-btn.active')?.dataset.f || 'tout');
+    } catch(err) { toast(err.message, 'error'); }
+  });
+
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+}
+
+async function remettreEnStock(id) {
+  if (!await confirm('Remettre en stock ?', 'La vente associée sera supprimée.')) return;
+  try {
+    await api(`api/stock.php?id=${id}`, 'PUT', { statut: 'disponible' });
+    toast('Remis en stock ✅', 'success');
+    loadStock(document.querySelector('.filtre-btn.active')?.dataset.f || 'tout');
+  } catch(e) { toast(e.message, 'error'); }
+}
+
+function editStock(id) {
+  const a = (window._stockData || []).find(x => x.id === id);
+  if (!a) return;
+
+  let modal = document.getElementById('edit-stock-modal');
+  if (!modal) { modal = document.createElement('div'); modal.id = 'edit-stock-modal'; document.body.appendChild(modal); }
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:999;display:flex;align-items:center;justify-content:center;padding:16px';
+
+  modal.innerHTML = `
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:14px;padding:28px 32px;width:100%;max-width:500px">
+      <div style="display:flex;align-items:center;margin-bottom:20px">
+        <h3>✏️ Modifier l'article</h3>
+        <button onclick="document.getElementById('edit-stock-modal').remove()" style="margin-left:auto;background:none;border:none;color:var(--muted);font-size:1.4rem;cursor:pointer">×</button>
+      </div>
+      <form id="form-edit-stock">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Date d'achat</label>
+            <input type="date" name="date_achat" value="${a.date_achat}" required>
+          </div>
+          <div class="form-group" style="grid-column:span 2">
+            <label>Article</label>
+            <input type="text" name="article" value="${escHtml(a.article)}" required>
+          </div>
+          <div class="form-group">
+            <label>Catégorie</label>
+            <select name="categorie">
+              ${['haut','bas','robe','veste','accessoire','ensemble','autre'].map(c =>
+                `<option value="${c}" ${a.categorie===c?'selected':''}>${{haut:'Haut',bas:'Bas / Jupe',robe:'Robe',veste:'Veste / Manteau',accessoire:'Accessoire',ensemble:'Ensemble',autre:'Autre'}[c]}</option>`
+              ).join('')}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>💰 Prix d'achat (€)</label>
+            <input type="number" name="prix_achat" step="0.01" min="0" value="${a.prix_achat}" required>
+          </div>
+          <div class="form-group" style="grid-column:span 2">
+            <label>Notes</label>
+            <input type="text" name="notes_achat" value="${escHtml(a.notes_achat||'')}">
+          </div>
+        </div>
+        <div style="display:flex;gap:12px;margin-top:20px">
+          <button type="submit" class="btn btn-primary">💾 Enregistrer</button>
+          <button type="button" class="btn btn-ghost" onclick="document.getElementById('edit-stock-modal').remove()">Annuler</button>
+        </div>
+      </form>
+    </div>
+  `;
+
+  document.getElementById('form-edit-stock').addEventListener('submit', async e => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const body = Object.fromEntries(fd.entries());
+    body.prix_achat = +body.prix_achat;
+    try {
+      await api(`api/stock.php?id=${id}`, 'PUT', body);
+      toast('Article mis à jour ✅', 'success');
+      modal.remove();
+      loadStock(document.querySelector('.filtre-btn.active')?.dataset.f || 'tout');
+    } catch(err) { toast(err.message, 'error'); }
+  });
+
+  modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+}
+
+async function deleteStock(id) {
+  if (!await confirm('Supprimer cet article ?', 'La vente liée sera aussi supprimée.')) return;
+  try {
+    await api(`api/stock.php?id=${id}`, 'DELETE');
+    toast('Supprimé', 'info');
+    loadStock(document.querySelector('.filtre-btn.active')?.dataset.f || 'tout');
+  } catch(e) { toast(e.message, 'error'); }
+}
+
 // ── Import Shopify ───────────────────────────────────────────────
 registerPage('import', () => {
   document.getElementById('page-content').innerHTML = `

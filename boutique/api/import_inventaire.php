@@ -38,9 +38,23 @@ if (!$headers) json_response(['error' => 'CSV vide ou invalide'], 400);
 
 $col = array_flip(array_map('trim', $headers));
 
-// Colonnes requises
-foreach (['Title', 'On hand (current)'] as $r)
-    if (!isset($col[$r])) json_response(['error' => "Colonne manquante: $r"], 400);
+// Colonne de quantité : "On hand (current)" (export complet) ou nom de boutique (export simplifié)
+$knownCols = ['Handle','Title','Option1 Name','Option1 Value','Option2 Name','Option2 Value',
+              'Option3 Name','Option3 Value','SKU','HS Code','COO','Location','Bin name',
+              'Incoming (not editable)','Unavailable (not editable)','Committed (not editable)',
+              'Available (not editable)','On hand (new)'];
+if (!isset($col['Title'])) json_response(['error' => 'Colonne Title manquante'], 400);
+
+$qtyCol = null;
+if (isset($col['On hand (current)'])) {
+    $qtyCol = 'On hand (current)';
+} else {
+    // Format simplifié : chercher la première colonne inconnue après COO
+    foreach (array_map('trim', $headers) as $h) {
+        if (!in_array($h, $knownCols, true)) { $qtyCol = $h; break; }
+    }
+}
+if (!$qtyCol) json_response(['error' => 'Colonne de quantité introuvable (On hand ou nom de boutique)'], 400);
 
 $date = $_POST['date_achat'] ?? date('Y-m-d');
 
@@ -61,7 +75,7 @@ while (($row = fgetcsv($handle, 0, ',', '"', '\\')) !== false) {
     foreach ($col as $name => $i) $r[$name] = trim($row[$i] ?? '');
 
     $titre    = $r['Title'];
-    $onHand   = (int)$r['On hand (current)'];
+    $onHand   = (int)($r[$qtyCol] ?? 0);
 
     if (!$titre || $onHand <= 0) { $skipped++; continue; }
 

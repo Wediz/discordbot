@@ -37,7 +37,7 @@
       <span class="icon">🗃️</span> Mon stock
     </a>
     <a class="nav-link" data-page="import">
-      <span class="icon">📥</span> Import Shopify
+      <span class="icon">📥</span> Imports CSV
     </a>
     <a class="nav-link" data-page="ventes">
       <span class="icon">🛍️</span> Ventes

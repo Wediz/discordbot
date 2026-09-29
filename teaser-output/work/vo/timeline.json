@@ -1,0 +1,55 @@
+{
+ "lines": [
+  {
+   "t0": 2.4,
+   "t1": 3.3,
+   "text": "Bonjour."
+  },
+  {
+   "t0": 3.85,
+   "t1": 8.544,
+   "text": "Prochainement, vous allez pouvoir suivre les aventures urbex en Europe."
+  },
+  {
+   "t0": 8.894,
+   "t1": 13.934,
+   "text": "Après plusieurs années d'exploration, j'ai enfin décidé de vous montrer l'envers du décor."
+  },
+  {
+   "t0": 14.384,
+   "t1": 16.911,
+   "text": "Ça ne sera pas des vidéos que vous voyez partout."
+  },
+  {
+   "t0": 17.261,
+   "t1": 20.609,
+   "text": "Ce sera unique, dans des lieux que vous ne connaissez pas."
+  },
+  {
+   "t0": 21.209,
+   "t1": 25.074,
+   "text": "L'ambiance : style POV, sans parole."
+  },
+  {
+   "t0": 25.774,
+   "t1": 27.029,
+   "text": "Uniquement de l'action."
+  },
+  {
+   "t0": 27.329,
+   "t1": 28.467,
+   "text": "De l'infiltration."
+  },
+  {
+   "t0": 28.767,
+   "t1": 29.586,
+   "text": "Des courses."
+  },
+  {
+   "t0": 29.936,
+   "t1": 30.354,
+   "text": "Poursuite."
+  }
+ ],
+ "vo_end": 30.554
+}

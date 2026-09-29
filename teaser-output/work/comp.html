@@ -181,6 +181,37 @@ function drawCharacter(t, hx, hy, sc, key, red){
   return {lx,ly};
 }
 
+// ── real photos ──
+const IMG=[new Image(), new Image()]; IMG[0].src='face1.png'; IMG[1].src='face2.png';
+const EYES=[{x:.521,y:.413},{x:.489,y:.419}];         // eye midpoint, normalised
+function drawPhoto(t, idx, sc, key, red, jx, jy){
+  const img=IMG[idx], base=Math.max(W/img.width,H/img.height);
+  const s=base*Math.max(1.02,sc)*(1+Math.sin(t*1.9)*.003);   // breathing
+  const e=EYES[idx], ex=e.x*img.width, ey=e.y*img.height;
+  const ax=(W-img.width*base)/2+ex*base, ay=(H-img.height*base)/2+ey*base;  // zoom anchored on the eyes
+  ctx.drawImage(img, ax-ex*s+jx, ay-ey*s+jy, img.width*s, img.height*s);
+  // flashlight: boost the beam, darken when the light drops
+  ctx.save(); ctx.globalCompositeOperation='screen';
+  const fl=.10+.06*vnoise(t*14);
+  const bg=ctx.createRadialGradient(40,60,0,40,60,900); bg.addColorStop(0,`rgba(255,248,235,${fl*key})`); bg.addColorStop(1,'rgba(255,248,235,0)');
+  ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
+  const rg=ctx.createRadialGradient(W+120,H*.48,0,W+120,H*.48,720);
+  rg.addColorStop(0,`rgba(255,40,40,${.42*red})`); rg.addColorStop(1,'rgba(255,0,0,0)');
+  ctx.fillStyle=rg; ctx.fillRect(0,0,W,H); ctx.restore();
+  if(key<1){ ctx.fillStyle=`rgba(0,0,0,${(1-key)*.94})`; ctx.fillRect(0,0,W,H); }
+}
+function drawBeamDust(t, alpha){
+  const dx=.47, dy=.88;                                // beam axis from the top-left lamp
+  ctx.save(); ctx.globalCompositeOperation='lighter';
+  for(const d of DUST){
+    const x=((d.x+t*10*d.v+Math.sin(t*.7+d.s)*18)%W+W)%W, y=((d.y+t*16*d.v+Math.cos(t*.5+d.s)*12)%H+H)%H;
+    const along=x*dx+y*dy, perp=Math.abs(x*dy-y*dx), wdt=70+along*.32;
+    const k=clamp(1-perp/wdt)*clamp(1-along/1100); if(k<=0) continue;
+    ctx.fillStyle=`rgba(255,246,230,${.75*k*alpha})`; ctx.beginPath(); ctx.arc(x,y,d.z*1.4,0,6.283); ctx.fill();
+  }
+  ctx.restore();
+}
+
 function drawDust(t, lx, ly, rad, alpha=1){
   ctx.save(); ctx.globalCompositeOperation='lighter';
   for(const d of DUST){
@@ -273,16 +304,20 @@ function render(t){
   if (t<END){
     const key=lightKey(t), red=redRim(t);
     // camera: slow push in + handheld drift, punch-ins on action words
-    let sc=lerp(.98,1.12,ss(2,22,t)) ;
     const actions=[23.2,24.95,26.13];
-    let punch=0; for(const a of actions){ punch+=.10*(1-ss(a,a+.35,t))*ss(a-.02,a,t); }
-    if(t>=23.1 && t<27.05) sc+=.05;
-    if(t>=28) sc=lerp(1.05,1.13,ss(28,33.7,t));
+    let punch=0; for(const a of actions){ punch+=.12*(1-ss(a,a+.35,t))*ss(a-.02,a,t); }
+    let idx=0, sc;
+    if (t<16.85){ idx=0; sc=lerp(1.02,1.16,ss(1,16.85,t)); }
+    else if (t<23.1){ idx=1; sc=lerp(1.06,1.2,ss(16.85,23.1,t)); }
+    else if (t<24.95){ idx=0; sc=lerp(1.55,1.62,ss(23.1,24.95,t)); }
+    else if (t<26.13){ idx=1; sc=lerp(1.5,1.58,ss(24.95,26.13,t)); }
+    else if (t<28.0){ idx=0; sc=lerp(1.95,2.05,ss(26.13,27.05,t)); }
+    else { idx=1; sc=lerp(1.12,1.32,ss(28,33.7,t)); }
     sc+=punch;
-    const hx=W/2+(vnoise(t*.8)-.5)*16 + (t>=23.1&&t<27.05?(vnoise(t*9)-.5)*26:0);
-    const hy=790+(vnoise(t*.7+5)-.5)*14 + Math.sin(t*1.9)*3 + envS(t)*5 + (t>=23.1&&t<27.05?(vnoise(t*9+3)-.5)*26:0);
-    const {lx,ly}=drawCharacter(t,hx,hy,sc,key,red);
-    drawDust(t,lx+200,ly+300,700,key);
+    const act=t>=23.1&&t<27.05;
+    const jx=(vnoise(t*.8)-.5)*14+(act?(vnoise(t*9)-.5)*30:0), jy=(vnoise(t*.7+5)-.5)*12+(act?(vnoise(t*9+3)-.5)*30:0);
+    drawPhoto(t, idx, sc, key, red, jx, jy);
+    drawBeamDust(t, key);
     // fade in from black
     ctx.fillStyle=`rgba(0,0,0,${1-ss(.95,1.05,t)})`; ctx.fillRect(0,0,W,H);
     // light off gap
@@ -300,7 +335,7 @@ function render(t){
       if(t<a0||t>=a1) continue;
       const lt=t-a0, s=lerp(1.35,1,eo(lt/.22));
       ctx.save(); ctx.translate(W/2,1380); ctx.scale(s,s);
-      txt(pre,0,-118,"700 40px 'JetBrains Mono'",C.red,'center',1,12);
+      txt(pre,0,-(w.length>10?110:140),"700 40px 'JetBrains Mono'",C.red,'center',1,12);
       ctx.font=`${w.length>10?150:190}px Anton`; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.letterSpacing='4px';
       ctx.lineWidth=14; ctx.strokeStyle='rgba(0,0,0,.9)'; ctx.lineJoin='round'; ctx.strokeText(w,0,0); ctx.fillStyle=C.text; ctx.fillText(w,0,0);
       ctx.restore();
@@ -355,6 +390,6 @@ function render(t){
   ctx.restore();
 }
 window.render=render;
-window.ready=document.fonts.ready.then(()=>Promise.all([document.fonts.load("200px Anton"),document.fonts.load("700 30px 'JetBrains Mono'"),document.fonts.load("400 30px 'JetBrains Mono'"),document.fonts.load("600 50px Inter"),document.fonts.load("700 50px Inter")])).then(()=>true);
+window.ready=Promise.all(IMG.map(i=>i.decode())).then(()=>document.fonts.ready).then(()=>Promise.all([document.fonts.load("200px Anton"),document.fonts.load("700 30px 'JetBrains Mono'"),document.fonts.load("400 30px 'JetBrains Mono'"),document.fonts.load("600 50px Inter"),document.fonts.load("700 50px Inter")])).then(()=>true);
 </script>
 </body></html>

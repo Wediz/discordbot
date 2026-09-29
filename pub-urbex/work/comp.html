@@ -1,0 +1,179 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link rel="stylesheet" href="fonts/g.css">
+<style>html,body{margin:0;background:#000}canvas{display:block}</style>
+<script src="data.js"></script>
+</head><body>
+<canvas id="c" width="1920" height="1080"></canvas>
+<script>
+const W=1920, H=1080, FPS=30, DUR=50;
+const TOP=138, CH=804, BOT=TOP+CH;                 // 2.39:1 picture area
+const C={ text:'#EDE6D8', dim:'rgba(237,230,216,.6)', red:'#FF2B2B' };
+const cv=document.getElementById('c'), ctx=cv.getContext('2d');
+
+// ── helpers ──
+const clamp=(x,a=0,b=1)=>Math.max(a,Math.min(b,x));
+const lerp=(a,b,t)=>a+(b-a)*t;
+const ss=(a,b,x)=>{ const t=clamp((x-a)/(b-a)); return t*t*(3-2*t); };
+const eio=t=>{ t=clamp(t); return t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2; };
+function rng(seed){ let s=seed>>>0||1; return ()=>{ s^=s<<13; s>>>=0; s^=s>>17; s^=s<<5; s>>>=0; return s/4294967296; }; }
+const hash=n=>{ const x=Math.sin(n*127.1+311.7)*43758.5453; return x-Math.floor(x); };
+function vnoise(x){ const i=Math.floor(x), f=x-i, u=f*f*(3-2*f); return lerp(hash(i),hash(i+1),u); }
+const mk=(w,h)=>{ const c=document.createElement('canvas'); c.width=w; c.height=h; return c; };
+
+const GRAIN=[]; { const r=rng(7); for(let k=0;k<8;k++){ const g=mk(640,360), gc=g.getContext('2d'), im=gc.createImageData(640,360);
+  for(let i=0;i<im.data.length;i+=4){ const v=r()*255; im.data[i]=im.data[i+1]=im.data[i+2]=v; im.data[i+3]=255; } gc.putImageData(im,0,0); GRAIN.push(g);} }
+const DUST=(()=>{ const r=rng(11),a=[]; for(let i=0;i<260;i++) a.push({x:r()*W,y:r()*H,z:.4+r()*1.4,s:r()*6.28,v:.2+r()*.8}); return a; })();
+
+// ── images ──
+const IMG={}; for(let i=1;i<=14;i++){ const k=String(i).padStart(2,'0'); IMG[k]=new Image(); IMG[k].src=`img/${k}.png`; }
+
+// shots: image, time span, camera from→to (normalised centre + zoom), optional rotation and light rays
+const SHOTS=[
+ {k:'01',t0:0.6, t1:5.6, a:{x:.5,y:.56,z:1.0},  b:{x:.5,y:.6,z:1.28}, rays:{x:.5,y:.55,ang:Math.PI*.5,spread:.9,s:.35}},
+ {k:'02',t0:5.2, t1:8.7, a:{x:.5,y:.5,z:1.0},   b:{x:.5,y:.5,z:1.38}},
+ {k:'03',t0:8.3, t1:11.9,a:{x:.5,y:.62,z:1.05}, b:{x:.47,y:.46,z:1.25}},
+ {k:'04',t0:11.5,t1:14.4,a:{x:.5,y:.56,z:1.12}, b:{x:.5,y:.5,z:1.0},  rays:{x:.47,y:.08,ang:Math.PI*.5,spread:.75,s:.55}},
+ {k:'05',t0:14.0,t1:17.1,a:{x:.45,y:.55,z:1.0}, b:{x:.55,y:.52,z:1.18},rays:{x:.58,y:.05,ang:Math.PI*.58,spread:.5,s:.4}},
+ {k:'06',t0:16.7,t1:19.6,a:{x:.56,y:.55,z:1.2}, b:{x:.45,y:.55,z:1.05},rays:{x:.85,y:.15,ang:Math.PI*.78,spread:.35,s:.4}},
+ {k:'07',t0:19.2,t1:21.95,a:{x:.42,y:.5,z:1.0}, b:{x:.5,y:.46,z:1.2}},
+ {k:'08',t0:21.95,t1:23.15,a:{x:.5,y:.56,z:1.0},b:{x:.52,y:.52,z:1.1}, cut:true},
+ {k:'09',t0:23.15,t1:24.6,a:{x:.5,y:.6,z:1.1},  b:{x:.45,y:.56,z:1.0}, cut:true},
+ {k:'10',t0:24.6,t1:25.65,a:{x:.5,y:.55,z:1.0}, b:{x:.52,y:.55,z:1.18},cut:true},
+ {k:'11',t0:25.65,t1:27.6,a:{x:.5,y:.5,z:1.2,r:0}, b:{x:.5,y:.5,z:1.45,r:.14}, cut:true},
+ {k:'03',t0:27.2,t1:30.9, a:{x:.46,y:.45,z:1.6}, b:{x:.46,y:.4,z:1.85}},
+ {k:'12',t0:30.5,t1:33.8, a:{x:.62,y:.52,z:1.28},b:{x:.6,y:.5,z:1.04}, rays:{x:.72,y:.1,ang:Math.PI*.6,spread:.45,s:.35}},
+ {k:'13',t0:33.4,t1:37.9, a:{x:.35,y:.58,z:1.05},b:{x:.36,y:.58,z:1.28}},
+ {k:'14',t0:37.5,t1:46.2, a:{x:.5,y:.56,z:1.0}, b:{x:.5,y:.5,z:2.7},  rays:{x:.5,y:.45,ang:Math.PI*.5,spread:1.2,s:.35}},
+];
+
+function camAt(s,t){
+  const p=clamp((t-s.t0)/(s.t1-s.t0)), e=s.k==='14'? Math.pow(p,1.8) : lerp(p,eio(p),.4);
+  return {x:lerp(s.a.x,s.b.x,e), y:lerp(s.a.y,s.b.y,e), z:lerp(s.a.z,s.b.z,e), r:lerp(s.a.r||0,s.b.r||0,e)};
+}
+function drawShot(s,t,alpha){
+  const img=IMG[s.k], iw=img.width, ih=img.height, c=camAt(s,t);
+  const base=Math.max(W/iw, CH/ih), S=base*c.z, vw=W/S, vh=CH/S;
+  let cx=c.x*iw, cy=c.y*ih;
+  cx=clamp(cx, vw/2, iw-vw/2); cy=clamp(cy, Math.max(vh/2, .15*ih+vh/2), ih-vh/2);    // keep the tile number out of frame
+  ctx.save(); ctx.globalAlpha=alpha; ctx.beginPath(); ctx.rect(0,TOP,W,CH); ctx.clip();
+  ctx.translate(W/2, TOP+CH/2); ctx.rotate(c.r); ctx.scale(S,S);
+  ctx.imageSmoothingQuality='high'; ctx.drawImage(img,-cx,-cy);
+  ctx.restore();
+  if(s.rays){ const rx=W/2+(s.rays.x*iw-cx)*S, ry=TOP+CH/2+(s.rays.y*ih-cy)*S; rays(rx,ry,t,s.rays.ang,s.rays.spread,s.rays.s*alpha); dust(t,rx,ry+300,900,alpha*.9); }
+  else dust(t,W*.5,H*.45,1100,alpha*.35);
+}
+
+// god rays: additive wedges from a source point, slowly shimmering
+function rays(x,y,t,ang,spread,str){
+  ctx.save(); ctx.beginPath(); ctx.rect(0,TOP,W,CH); ctx.clip(); ctx.globalCompositeOperation='screen';
+  const n=9, L=1900;
+  for(let i=0;i<n;i++){
+    const a=ang+(i/(n-1)-.5)*spread + Math.sin(t*.25+i)*.02, w=.02+.03*hash(i*3.3);
+    const k=(.35+.65*vnoise(t*.6+i*7.1))*str;
+    const g=ctx.createLinearGradient(x,y,x+Math.cos(a)*L,y+Math.sin(a)*L);
+    g.addColorStop(0,`rgba(255,236,200,${.35*k})`); g.addColorStop(.5,`rgba(255,230,190,${.12*k})`); g.addColorStop(1,'rgba(255,230,190,0)');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x+Math.cos(a-w)*L,y+Math.sin(a-w)*L); ctx.lineTo(x+Math.cos(a+w)*L,y+Math.sin(a+w)*L); ctx.closePath(); ctx.fill();
+  }
+  ctx.restore();
+}
+function dust(t,lx,ly,rad,alpha){
+  if(alpha<=0) return; ctx.save(); ctx.globalCompositeOperation='lighter';
+  for(const d of DUST){ const x=((d.x+t*9*d.v+Math.sin(t*.4+d.s)*22)%W+W)%W, y=((d.y+t*6*d.v+Math.cos(t*.3+d.s)*16)%H+H)%H;
+    if(y<TOP||y>BOT) continue; const k=clamp(1-Math.hypot(x-lx,y-ly)/rad); if(k<=0) continue;
+    ctx.fillStyle=`rgba(255,244,222,${.55*k*alpha})`; ctx.beginPath(); ctx.arc(x,y,d.z*1.3,0,6.283); ctx.fill(); }
+  ctx.restore();
+}
+
+// ── typography ──
+function serif(str,x,y,size,alpha,{italic=true,weight=400,spacing=0,color=C.text}={}){
+  if(alpha<=0) return;
+  ctx.save(); ctx.globalAlpha=alpha; ctx.font=`${italic?'italic ':''}${weight} ${size}px 'Cormorant Garamond'`; ctx.textAlign='center'; ctx.textBaseline='middle';
+  if(spacing) ctx.letterSpacing=spacing+'px'; ctx.shadowColor='rgba(0,0,0,.85)'; ctx.shadowBlur=24; ctx.fillStyle=color; ctx.fillText(str,x,y); ctx.restore();
+}
+function mono(str,x,y,size,alpha,color=C.dim,spacing=8){ if(alpha<=0) return; ctx.save(); ctx.globalAlpha=alpha; ctx.font=`400 ${size}px 'JetBrains Mono'`; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.letterSpacing=spacing+'px'; ctx.fillStyle=color; ctx.fillText(str,x,y); ctx.restore(); }
+const lineFade=(l,t)=>ss(l.t0-.15,l.t0+.35,t)*(1-ss(l.t1+.35,l.t1+.8,t));
+
+// "Ne laissez aucune trace." → dust
+let TR=null;
+function prepTrace(){
+  const o=mk(W,160), oc=o.getContext('2d'); oc.font="italic 500 60px 'Cormorant Garamond'"; oc.textAlign='center'; oc.textBaseline='middle'; oc.fillStyle=C.text;
+  oc.fillText('Ne laissez aucune trace.',W/2,80);
+  const d=oc.getImageData(0,0,W,160).data, pts=[], r=rng(5); let mn=W,mx=0;
+  for(let y=0;y<160;y+=2) for(let x=0;x<W;x+=2) if(d[(y*W+x)*4+3]>120){ pts.push({x,y,vx:30+r()*120,vy:-(20+r()*90),d:r()}); mn=Math.min(mn,x); mx=Math.max(mx,x); }
+  TR={o,pts,mn,mx};
+}
+
+// ── render ──
+function render(t){
+  ctx.save(); ctx.setTransform(1,0,0,1,0,0); ctx.globalAlpha=1; ctx.globalCompositeOperation='source-over';
+  ctx.fillStyle='#000'; ctx.fillRect(0,0,W,H);
+
+  // shots with crossfades (hard cuts for the categories)
+  for(const s of SHOTS){
+    if(t<s.t0||t>s.t1) continue;
+    const fin = s.cut ? 1 : ss(s.t0,s.t0+.7,t);
+    drawShot(s,t, s.k==='01' ? ss(.6,2.2,t) : fin);
+  }
+  // cut flashes on the categories
+  let flash=0; for(const c of [21.95,23.15,24.6,25.65]) flash=Math.max(flash,(1-ss(c,c+.18,t))*ss(c-.01,c,t));
+  if(flash>0){ ctx.fillStyle=`rgba(255,246,228,${flash*.55})`; ctx.fillRect(0,TOP,W,CH); }
+
+  // bloom (cheap: blurred, downscaled copy screened on top)
+  const B=bloomC; bc.clearRect(0,0,480,270); bc.filter='blur(5px)'; bc.drawImage(cv,0,0,480,270); bc.filter='none';
+  ctx.save(); ctx.globalCompositeOperation='screen'; ctx.globalAlpha=.32; ctx.drawImage(B,0,0,W,H); ctx.restore();
+  // warm grade
+  ctx.save(); ctx.globalCompositeOperation='soft-light'; ctx.fillStyle='rgba(255,196,130,.22)'; ctx.fillRect(0,TOP,W,CH); ctx.restore();
+
+  // ── words ──
+  const L=TL;
+  // scrims so the type always reads: bottom gradient + a soft centre veil for the finale titles
+  const sg=ctx.createLinearGradient(0,BOT-300,0,BOT); sg.addColorStop(0,'rgba(0,0,0,0)'); sg.addColorStop(1,'rgba(0,0,0,.62)');
+  ctx.fillStyle=sg; ctx.fillRect(0,BOT-300,W,300);
+  const cvA=ss(38.3,39.0,t)*(1-ss(44.9,45.4,t));
+  if(cvA>0){ const cg=ctx.createRadialGradient(W/2,TOP+CH*.46,0,W/2,TOP+CH*.46,780); cg.addColorStop(0,`rgba(0,0,0,${.5*cvA})`); cg.addColorStop(1,'rgba(0,0,0,0)'); ctx.fillStyle=cg; ctx.fillRect(0,TOP,W,CH); }
+  const capY=BOT-78;
+  [0,1,2,3,4,5,6,8,9].forEach(i=>serif(L[i].text,W/2,capY,60,lineFade(L[i],t),{weight:500}));
+  // categories: one word each, centred
+  const cats=[['CHÂTEAUX',21.95,23.15],['SANATORIUMS',23.15,24.6],['FORTS',24.6,25.65],['USINES',25.65,27.2]];
+  for(const [w,a,b] of cats){ if(t<a||t>=b) continue; const k=ss(a,a+.25,t)*(1-ss(b-.2,b,t));
+    ctx.save(); const s=lerp(1.06,1,clamp((t-a)/1)); ctx.translate(W/2,TOP+CH/2); ctx.scale(s,s); serif(w,0,0,150,k,{italic:false,weight:600,spacing:26}); ctx.restore(); }
+  // the code
+  serif('Ne prenez que des photos.',W/2,capY-76,60,ss(33.55,33.95,t)*(1-ss(37.3,37.7,t)));
+  if(!TR) prepTrace();
+  const ta=ss(35.1,35.5,t)*(1-ss(37.6,38.0,t)), d=ss(36.6,37.5,t), span=TR.mx-TR.mn, sx=TR.mn+d*(span+80)-40, oy=capY-80;
+  if(ta>0){ ctx.save(); ctx.globalAlpha=ta; ctx.beginPath(); ctx.rect(sx,0,W,H); ctx.clip(); ctx.shadowColor='rgba(0,0,0,.85)'; ctx.shadowBlur=24; ctx.drawImage(TR.o,0,oy); ctx.restore(); }
+  if(d>0){ ctx.save(); ctx.fillStyle=C.text; for(const p of TR.pts){ if(p.x>sx) continue; const age=(sx-p.x)/(span+80)*.7+p.d*.05, al=clamp(1-age*2)*ta; if(al<=0) continue;
+      ctx.globalAlpha=al; ctx.fillRect(p.x+p.vx*age,oy+p.y+p.vy*age,2,2); } ctx.restore(); }
+  // finale titles
+  const out=1-ss(44.9,45.4,t);
+  serif('URBEX-FRANCE.COM',W/2,TOP+CH*.42,112,ss(38.5,39.3,t)*out,{italic:false,weight:600,spacing:14});
+  serif('La carte des lieux abandonnés.',W/2,TOP+CH*.42+92,52,ss(40.1,40.7,t)*out);
+  serif('Le monde d’avant vous attend.',W/2,capY,58,ss(43.1,43.6,t)*out);
+
+  // white bloom into the light, then the end card
+  const white=ss(44.6,45.7,t)*(1-ss(45.9,46.9,t));
+  if(t>=45.7){ ctx.fillStyle='#0b0907'; ctx.fillRect(0,0,W,H);
+    const g=ctx.createRadialGradient(W/2,H/2,0,W/2,H/2,900); g.addColorStop(0,'rgba(255,225,180,.10)'); g.addColorStop(1,'rgba(0,0,0,0)'); ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+    dust(t,W/2,H/2,900,.6);
+    const e=ss(46.3,47.0,t);
+    mono('LA CARTE DES LIEUX ABANDONNÉS',W/2,H/2-110,24,e,C.dim,12);
+    serif('urbex-france.com',W/2,H/2-10,104,ss(46.5,47.2,t),{italic:false,weight:600,spacing:6});
+    serif('Ne prenez que des photos. Ne laissez aucune trace.',W/2,H/2+90,40,ss(47.2,47.8,t),{color:C.dim});
+    mono('PRÉSENTÉ PAR  NØTRACE',W/2,H/2+190,22,ss(47.6,48.1,t),C.red,10);
+  }
+  if(white>0){ ctx.fillStyle=`rgba(255,250,240,${white})`; ctx.fillRect(0,0,W,H); }
+
+  // film: vignette, grain, bars, fade in/out
+  const v=ctx.createRadialGradient(W/2,H/2,H*.35,W/2,H/2,H*1.05); v.addColorStop(0,'rgba(0,0,0,0)'); v.addColorStop(1,'rgba(0,0,0,.6)'); ctx.fillStyle=v; ctx.fillRect(0,0,W,H);
+  ctx.save(); ctx.globalCompositeOperation='overlay'; ctx.globalAlpha=.14; ctx.drawImage(GRAIN[Math.floor(t*FPS)%8],0,0,W,H); ctx.restore();
+  ctx.fillStyle='#000'; ctx.fillRect(0,0,W,TOP); ctx.fillRect(0,BOT,W,H-BOT);
+  ctx.fillStyle=`rgba(0,0,0,${ss(49.2,49.95,t)})`; ctx.fillRect(0,0,W,H);
+  ctx.restore();
+}
+const bloomC=mk(480,270), bc=bloomC.getContext('2d');
+window.render=render;
+window.ready=Promise.all(Object.values(IMG).map(i=>i.decode())).then(()=>document.fonts.ready).then(()=>Promise.all([
+  document.fonts.load("italic 400 56px 'Cormorant Garamond'"),document.fonts.load("600 100px 'Cormorant Garamond'"),document.fonts.load("400 24px 'JetBrains Mono'")])).then(()=>{ prepTrace(); return true; });
+</script>
+</body></html>

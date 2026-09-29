@@ -1,0 +1,268 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link rel="stylesheet" href="fonts/g.css">
+<style>html,body{margin:0;background:#000}canvas{display:block}</style>
+<script src="data.js"></script><script src="map.js"></script>
+</head><body>
+<canvas id="c" width="1080" height="1920"></canvas>
+<script>
+const W=1080, H=1920, FPS=30, DUR=38;
+const C={ text:'#ECE8E0', red:'#FF2B2B', dim:'rgba(236,232,224,.55)', card:'rgba(14,14,17,.92)', line:'rgba(236,232,224,.14)' };
+const cv=document.getElementById('c'), ctx=cv.getContext('2d');
+
+// ── helpers ──
+const clamp=(x,a=0,b=1)=>Math.max(a,Math.min(b,x));
+const lerp=(a,b,t)=>a+(b-a)*t;
+const ss=(a,b,x)=>{ const t=clamp((x-a)/(b-a)); return t*t*(3-2*t); };
+const eo=t=>1-Math.pow(1-clamp(t),3);
+const eob=t=>{ t=clamp(t); const c1=1.70158,c3=c1+1; return 1+c3*Math.pow(t-1,3)+c1*Math.pow(t-1,2); };
+function rng(seed){ let s=seed>>>0||1; return ()=>{ s^=s<<13; s>>>=0; s^=s>>17; s^=s<<5; s>>>=0; return s/4294967296; }; }
+const hash=n=>{ const x=Math.sin(n*127.1+311.7)*43758.5453; return x-Math.floor(x); };
+function vnoise(x){ const i=Math.floor(x), f=x-i, u=f*f*(3-2*f); return lerp(hash(i),hash(i+1),u); }
+const mk=(w,h)=>{ const c=document.createElement('canvas'); c.width=w; c.height=h; return c; };
+function rrect(x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+function txt(s,x,y,font,color,align='center',alpha=1,spacing=0){
+  ctx.save(); ctx.font=font; ctx.fillStyle=color; ctx.globalAlpha=alpha; ctx.textAlign=align; ctx.textBaseline='middle';
+  if(spacing) ctx.letterSpacing=spacing+'px'; ctx.fillText(s,x,y); ctx.restore(); }
+
+const GRAIN=[]; { const r=rng(7); for(let k=0;k<8;k++){ const g=mk(360,640), gc=g.getContext('2d'), im=gc.createImageData(360,640);
+  for(let i=0;i<im.data.length;i+=4){ const v=r()*255; im.data[i]=im.data[i+1]=im.data[i+2]=v; im.data[i+3]=255; } gc.putImageData(im,0,0); GRAIN.push(g);} }
+const DUST=(()=>{ const r=rng(11),a=[]; for(let i=0;i<220;i++) a.push({x:r()*W,y:r()*H,z:.4+r()*1.3,s:r()*6.28,v:.2+r()*.8}); return a; })();
+function dust(t,lx,ly,rad,alpha){ ctx.save(); ctx.globalCompositeOperation='lighter';
+  for(const d of DUST){ const x=((d.x+t*12*d.v+Math.sin(t*.7+d.s)*18)%W+W)%W, y=((d.y+t*14*d.v+Math.cos(t*.5+d.s)*12)%H+H)%H;
+    const k=clamp(1-Math.hypot(x-lx,y-ly)/rad); if(k<=0) continue; ctx.fillStyle=`rgba(255,246,230,${.6*k*k*alpha})`; ctx.beginPath(); ctx.arc(x,y,d.z*1.4,0,6.283); ctx.fill(); }
+  ctx.restore(); }
+
+// ── photos (NØTRACE) ──
+const IMG=[new Image(),new Image()]; IMG[0].src='face1.png'; IMG[1].src='face2.png';
+const EYES=[{x:.521,y:.413},{x:.489,y:.419}];
+function photo(t,idx,sc,dark=0,red=.5){
+  const img=IMG[idx], base=Math.max(W/img.width,H/img.height), s=base*Math.max(1.02,sc)*(1+Math.sin(t*1.9)*.003);
+  const e=EYES[idx], ex=e.x*img.width, ey=e.y*img.height, ax=(W-img.width*base)/2+ex*base, ay=(H-img.height*base)/2+ey*base;
+  const jx=(vnoise(t*.8)-.5)*14, jy=(vnoise(t*.7+5)-.5)*12;
+  ctx.drawImage(img,ax-ex*s+jx,ay-ey*s+jy,img.width*s,img.height*s);
+  ctx.save(); ctx.globalCompositeOperation='screen';
+  const bg=ctx.createRadialGradient(40,60,0,40,60,900); bg.addColorStop(0,`rgba(255,248,235,${.1+.06*vnoise(t*14)})`); bg.addColorStop(1,'rgba(255,248,235,0)'); ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
+  const rg=ctx.createRadialGradient(W+120,H*.48,0,W+120,H*.48,720); rg.addColorStop(0,`rgba(255,40,40,${.42*red})`); rg.addColorStop(1,'rgba(255,0,0,0)'); ctx.fillStyle=rg; ctx.fillRect(0,0,W,H);
+  ctx.restore();
+  if(dark>0){ ctx.fillStyle=`rgba(0,0,0,${dark})`; ctx.fillRect(0,0,W,H); }
+}
+
+// ── map ──
+const MS=.96, MX=(W-1000*MS)/2, MY=430;                       // map placement
+const mp=(p)=>[MX+p[0]*MS, MY+p[1]*MS];
+function geoToMap(lon,lat){ return mp([(lon*PROJ.k-PROJ.x0)*PROJ.s, (-lat-PROJ.y0)*PROJ.s]); }
+function ringPath(ring){ const p=new Path2D(); ring.forEach((q,i)=>{ const [x,y]=mp(q); i?p.lineTo(x,y):p.moveTo(x,y); }); p.closePath(); return p; }
+const FRP=FR.flatMap(f=>f.rings.map(ringPath));
+const REGP=REG.map(f=>({name:f.name, paths:f.rings.map(ringPath), c:(()=>{ let sx=0,sy=0,n=0; for(const q of f.rings[0]){ sx+=q[0]; sy+=q[1]; n++; } return mp([sx/n,sy/n]); })()}));
+// perimeter length for draw-on
+const FRL=(()=>{ let best=null; for(const f of FR) for(const r of f.rings) if(!best||r.length>best.length) best=r; return best; })();
+// pins inside France (point-in-polygon on the main outline)
+function inside(x,y){ const q=[(x-MX)/MS,(y-MY)/MS]; let c=false; for(let i=0,j=FRL.length-1;i<FRL.length;j=i++){ const a=FRL[i],b=FRL[j];
+  if(((a[1]>q[1])!=(b[1]>q[1])) && (q[0]<(b[0]-a[0])*(q[1]-a[1])/(b[1]-a[1])+a[0])) c=!c; } return c; }
+const PINS=(()=>{ const r=rng(77), a=[]; while(a.length<140){ const x=MX+r()*1000*MS, y=MY+r()*963*MS; if(inside(x,y)) a.push({x,y,d:r(),k:Math.floor(r()*4)}); } return a; })();
+const HERO=PINS.reduce((b,p)=>Math.hypot(p.x-W*.62,p.y-(MY+700))<Math.hypot(b.x-W*.62,b.y-(MY+700))?p:b,PINS[0]);
+
+function drawMap(t, draw, fill, pinsP, cam){
+  ctx.save();
+  if(cam){ ctx.translate(cam.x,cam.y); ctx.scale(cam.s,cam.s); ctx.translate(-cam.x,-cam.y); }
+  // regions (subtle)
+  ctx.lineWidth=1.5/(cam?cam.s:1);
+  for(const r of REGP){ for(const p of r.paths){ ctx.fillStyle=`rgba(236,232,224,${.035*fill})`; ctx.fill(p); ctx.strokeStyle=`rgba(236,232,224,${.10*fill})`; ctx.stroke(p); } }
+  // outline draw-on
+  if(draw>0){ ctx.save(); ctx.strokeStyle=C.text; ctx.lineWidth=3/(cam?cam.s:1); ctx.shadowColor='rgba(255,255,255,.35)'; ctx.shadowBlur=12;
+    const n=Math.floor(FRL.length*draw); ctx.beginPath(); for(let i=0;i<n;i++){ const [x,y]=mp(FRL[i]); i?ctx.lineTo(x,y):ctx.moveTo(x,y); } if(draw>=1) ctx.closePath(); ctx.stroke();
+    ctx.lineWidth=2/(cam?cam.s:1); for(const p of FRP.slice(1)) { ctx.globalAlpha=draw; ctx.stroke(p);} ctx.restore(); }
+  // pins
+  for(const p of PINS){
+    const a=ss(p.d*.85,p.d*.85+.12,pinsP); if(a<=0) continue;
+    const pop=eob(clamp((pinsP-p.d*.85)/.12));
+    const rad=5.5*pop/(cam?Math.sqrt(cam.s):1);
+    ctx.globalAlpha=a; ctx.fillStyle=C.red; ctx.beginPath(); ctx.arc(p.x,p.y,rad,0,6.283); ctx.fill();
+    const pr=((t+p.d*3)%2)/2; ctx.strokeStyle=`rgba(255,43,43,${.45*(1-pr)})`; ctx.lineWidth=1.5/(cam?cam.s:1); ctx.beginPath(); ctx.arc(p.x,p.y,rad+pr*22/(cam?Math.sqrt(cam.s):1),0,6.283); ctx.stroke();
+    ctx.globalAlpha=1;
+  }
+  ctx.restore();
+}
+
+// ── captions (word by word) ──
+const HOT=['derrière.','France.','seule','GPS,','communauté,','gratuite.','membres.','Abonnez-vous.','prochain','avant'];
+function caption(line,t,y,size=54){
+  const words=line.text.split(' '), total=line.text.length, dur=Math.max(.3,line.t1-line.t0);
+  ctx.save(); ctx.font=`600 ${size}px Inter`; ctx.textBaseline='middle';
+  const rows=[]; let row=[]; for(const w of words){ const test=[...row,w].join(' '); if(ctx.measureText(test).width>900&&row.length){ rows.push(row); row=[w]; } else row.push(w); } rows.push(row);
+  let ci=0; const lh=size*1.28, y0=y-(rows.length-1)*lh/2, fade=1-ss(line.t1+.25,line.t1+.45,t);
+  rows.forEach((r,ri)=>{ const rw=ctx.measureText(r.join(' ')).width; let x=W/2-rw/2;
+    for(const w of r){ const at=line.t0+dur*(ci/total)*.92; ci+=w.length+1;
+      const a=ss(at-.02,at+.1,t)*fade, pop=1+.12*(1-ss(at,at+.14,t)), hot=HOT.includes(w), ww=ctx.measureText(w).width;
+      ctx.save(); ctx.globalAlpha=a; ctx.translate(x+ww/2,y0+ri*lh); ctx.scale(pop,pop); ctx.textAlign='center';
+      ctx.lineJoin='round'; ctx.lineWidth=10; ctx.strokeStyle='rgba(0,0,0,.85)'; ctx.strokeText(w,0,0); ctx.fillStyle=hot?C.red:C.text; ctx.fillText(w,0,0); ctx.restore();
+      x+=ww+ctx.measureText(' ').width; } });
+  ctx.restore();
+}
+const lineAt=t=>TL.findIndex(l=>t>=l.t0-.05&&t<=l.t1+.45);
+
+// ── UI pieces ──
+function lockIcon(x,y,s,col){ ctx.save(); ctx.translate(x,y); ctx.scale(s,s); ctx.strokeStyle=col; ctx.lineWidth=5; ctx.beginPath(); ctx.arc(0,-10,13,Math.PI,0); ctx.lineTo(13,0); ctx.moveTo(-13,0); ctx.lineTo(-13,-10); ctx.stroke();
+  ctx.fillStyle=col; rrect(-20,-2,40,30,6); ctx.fill(); ctx.restore(); }
+function bell(x,y,s,rot,col){ ctx.save(); ctx.translate(x,y); ctx.rotate(rot); ctx.scale(s,s); ctx.fillStyle=col;
+  ctx.beginPath(); ctx.moveTo(-14,8); ctx.quadraticCurveTo(-14,-14,0,-16); ctx.quadraticCurveTo(14,-14,14,8); ctx.lineTo(18,12); ctx.lineTo(-18,12); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.arc(0,16,4.5,0,6.283); ctx.fill(); ctx.restore(); }
+function glitch(str,x,y,font,amt,seed){
+  const o=mk(W,400), oc=o.getContext('2d'); oc.font=font; oc.textAlign='center'; oc.textBaseline='middle'; oc.fillStyle=C.text; oc.fillText(str,W/2,200);
+  if(amt<=.001){ ctx.drawImage(o,x-W/2,y-200); return; }
+  const r=rng(seed); const tint=c=>{ const t2=mk(W,400),tc=t2.getContext('2d'); tc.drawImage(o,0,0); tc.globalCompositeOperation='source-in'; tc.fillStyle=c; tc.fillRect(0,0,W,400); return t2; };
+  ctx.save(); ctx.globalCompositeOperation='lighter'; ctx.globalAlpha=.55*amt; ctx.drawImage(tint('#ff2020'),x-W/2-18*amt,y-200); ctx.drawImage(tint('#20e0ff'),x-W/2+18*amt,y-200); ctx.restore();
+  let yy=0; while(yy<400){ const h=8+Math.floor(r()*36), off=r()<.35?(r()-.5)*120*amt:0; ctx.drawImage(o,0,yy,W,h,x-W/2+off,y-200+yy,W,h); yy+=h; }
+}
+function notrace(cx,cy,size,slashP,alpha=1){
+  ctx.save(); ctx.globalAlpha=alpha; ctx.font=`${size}px Anton`; ctx.letterSpacing=(size*.06)+'px'; ctx.textAlign='left'; ctx.textBaseline='middle';
+  const full=ctx.measureText('NOTRACE').width, wN=ctx.measureText('N').width, wO=ctx.measureText('O').width-size*.06, x0=cx-full/2+size*.03;
+  ctx.fillStyle=C.text; ctx.fillText('NOTRACE',x0,cy); const ox=x0+wN+wO/2;
+  if(slashP>0){ ctx.strokeStyle=C.red; ctx.lineWidth=size*.064; ctx.lineCap='square'; const x1=ox-wO*.55,y1=cy+size*.33,x2=ox+wO*.55,y2=cy-size*.55;
+    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(lerp(x1,x2,slashP),lerp(y1,y2,slashP)); ctx.stroke(); }
+  ctx.restore(); }
+
+// the place card (GPS + guide), used for "GPS" and "membres"
+function placeCard(t, a, s, locked, cx, cy){
+  if(a<=0) return;
+  ctx.save(); ctx.globalAlpha=a; ctx.translate(cx,cy); ctx.scale(s,s);
+  const w=820, h=430; ctx.shadowColor='rgba(0,0,0,.8)'; ctx.shadowBlur=50; rrect(-w/2,-h/2,w,h,26); ctx.fillStyle=C.card; ctx.fill(); ctx.shadowBlur=0;
+  ctx.strokeStyle=C.line; ctx.lineWidth=2; ctx.stroke();
+  ctx.textAlign='left'; ctx.textBaseline='middle';
+  ctx.fillStyle=C.red; rrect(-w/2+40,-h/2+40,222,46,23); ctx.fill();
+  ctx.font="700 24px 'JetBrains Mono'"; ctx.fillStyle='#fff'; ctx.letterSpacing='3px'; ctx.fillText('SANATORIUM',-w/2+60,-h/2+64);
+  ctx.letterSpacing='0px'; ctx.font="600 46px Inter"; ctx.fillStyle=C.text; ctx.fillText('Sanatorium abandonné',-w/2+40,-h/2+140);
+  // rows
+  const rows=[['GPS', locked ? '45.7•••• N   4.8•••• E' : ''], ['GUIDE', locked ? 'Accès, parking, état du lieu' : '']];
+  const tp=clamp((t-16.5)/1.6);
+  rows.forEach(([k,v],i)=>{ const y=-h/2+230+i*86;
+    ctx.fillStyle=C.line; ctx.fillRect(-w/2+40,y-43,w-80,2);
+    ctx.font="700 26px 'JetBrains Mono'"; ctx.fillStyle=C.dim; ctx.fillText(k,-w/2+40,y);
+    ctx.font="500 34px 'JetBrains Mono'"; ctx.fillStyle=C.text; if(locked) ctx.filter=`blur(${8*ss(26.3,26.6,t)}px)`;
+    const full = i===0 ? '45.7'+'•'.repeat(4)+' N   4.8'+'•'.repeat(4)+' E' : 'Accès, parking, état du lieu';
+    const shown = full.slice(0, Math.floor(full.length*clamp(tp*1.6-i*.6)));
+    ctx.fillText(shown,-w/2+200,y); ctx.filter='none';
+  });
+  if(locked){ const la=ss(26.3,26.6,t);
+    ctx.globalAlpha=a*la; ctx.fillStyle='rgba(8,8,10,.55)'; rrect(-w/2,-h/2+180,w,h-180,26); ctx.fill();
+    lockIcon(-150,-h/2+300,1.4,C.red);
+    ctx.font="700 34px 'JetBrains Mono'"; ctx.fillStyle=C.text; ctx.letterSpacing='6px'; ctx.textAlign='left'; ctx.fillText('R\u00C9SERV\u00C9 AUX MEMBRES',-100,-h/2+306); }
+  ctx.restore();
+}
+
+// ── render ──
+function render(t){
+  ctx.save(); ctx.setTransform(1,0,0,1,0,0); ctx.globalCompositeOperation='source-over'; ctx.globalAlpha=1;
+  ctx.fillStyle='#050506'; ctx.fillRect(0,0,W,H);
+  let flash=0, shake=0, capY=1500, showCap=true;
+
+  if(t<5.6){                                           // 1 — HOOK: NØTRACE face
+    photo(t,1,lerp(1.05,1.2,ss(0,5.6,t)),0,.5);
+    ctx.fillStyle=`rgba(0,0,0,${1-ss(0,.4,t)})`; ctx.fillRect(0,0,W,H);
+    capY=1420;
+  }
+  else if(t<10.95){                                     // 2 — CATEGORIES
+    const cats=[['CHÂTEAUX',5.86],['SANATORIUMS',6.906],['FORTS MILITAIRES',8.319],['USINES',9.783]];
+    let i=0; for(let k=0;k<4;k++) if(t>=cats[k][1]-.05) i=k;
+    const st=t-cats[i][1];
+    photo(t,i%2,1.9+i*.12+st*.05,.72,.9);
+    const lx=lerp(-200,W+200,clamp(st/1.2)), ly=H*.45;
+    ctx.save(); ctx.globalCompositeOperation='screen'; const g=ctx.createRadialGradient(lx,ly,0,lx,ly,520); g.addColorStop(0,'rgba(255,245,230,.16)'); g.addColorStop(1,'rgba(255,245,230,0)'); ctx.fillStyle=g; ctx.fillRect(0,0,W,H); ctx.restore();
+    dust(t,lx,ly,520,1);
+    const s=lerp(1.25,1,eo(st/.22));
+    ctx.save(); ctx.translate(W/2,H*.5); ctx.scale(s,s);
+    txt(`0${i+1} / 04`,0,-190,"700 30px 'JetBrains Mono'",C.red,'center',1,10);
+    ctx.font=`${cats[i][0].length>12?128:170}px Anton`; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.letterSpacing='4px'; ctx.fillStyle=C.text; ctx.fillText(cats[i][0],0,0);
+    ctx.restore();
+    flash=(1-ss(0,.1,st))*.45; shake=(1-ss(0,.22,st))*14; showCap=false;
+  }
+  else if(t<16.2){                                      // 3 — MAP draws + pins
+    const lt=t-11.0;
+    ctx.fillStyle='#07070a'; ctx.fillRect(0,0,W,H);
+    drawMap(t, eo(lt/1.6), ss(1.2,2.4,lt), clamp((lt-.8)/2.2), null);
+    // app bar
+    const ba=ss(3.0,3.4,lt); ctx.save(); ctx.globalAlpha=ba; rrect(90,250,W-180,96,48); ctx.fillStyle=C.card; ctx.fill(); ctx.strokeStyle=C.line; ctx.lineWidth=2; ctx.stroke();
+    txt('⌕',150,299,"500 44px Inter",C.dim,'center',ba); txt('urbex-france.com',200,298,"500 38px 'JetBrains Mono'",C.text,'left',ba); ctx.fillStyle=C.red; ctx.beginPath(); ctx.arc(W-150,298,12,0,6.283); ctx.fill(); ctx.restore();
+    capY=1560;
+  }
+  else if(t<24.35){                                     // 4 — GPS card, then community by region
+    const lt=t-16.2;
+    ctx.fillStyle='#07070a'; ctx.fillRect(0,0,W,H);
+    if(t<19.4){
+      const z=eo(lt/.9); const cam={x:HERO.x,y:HERO.y,s:lerp(1,2.6,z)};
+      // keep hero pin centred-ish while zooming
+      ctx.save(); ctx.translate(lerp(0,W/2-HERO.x,z),lerp(0,760-HERO.y,z)); drawMap(t,1,1,1,cam); ctx.restore();
+      ctx.save(); ctx.globalCompositeOperation='lighter'; ctx.strokeStyle=`rgba(255,43,43,${.8*z})`; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(W/2,760,40+10*Math.sin(t*6),0,6.283); ctx.stroke(); ctx.restore();
+      placeCard(t, ss(16.6,16.9,t), eob((t-16.6)/.3), false, W/2, 1150);
+      capY=1560;
+    } else {
+      // regions light up one by one + forum chips
+      const order=['Bretagne','Normandie','Hauts-de-France','Grand Est','Auvergne-Rhône-Alpes','Occitanie','Nouvelle-Aquitaine','Provence-Alpes-Côte d\'Azur','Île-de-France','Pays de la Loire','Centre-Val de Loire','Bourgogne-Franche-Comté','Corse'];
+      drawMap(t,1,1,1,null);
+      const rt=t-19.56;
+      order.forEach((n,i)=>{ const r=REGP.find(q=>q.name===n); if(!r) return; const a=ss(i*.28,i*.28+.2,rt)*(1-.6*ss(i*.28+.6,i*.28+1.2,rt));
+        if(a<=0) return; ctx.save(); ctx.globalAlpha=a; for(const p of r.paths){ ctx.fillStyle='rgba(255,43,43,.28)'; ctx.fill(p); ctx.strokeStyle=C.red; ctx.lineWidth=3; ctx.stroke(p);} ctx.restore(); });
+      // forum messages (illustrative)
+      const msgs=[['FORUM BRETAGNE','Quelqu’un y est allé récemment ?',19.9],['FORUM GRAND EST','Accès toujours possible, RAS.',20.9],['FORUM OCCITANIE','Nouveau spot ajouté ✔',21.9]];
+      msgs.forEach(([h,m,t0],i)=>{ const a=ss(t0,t0+.25,t); if(a<=0) return; const y=1180+i*130-(1-eob((t-t0)/.35))*40;
+        ctx.save(); ctx.globalAlpha=a; rrect(110,y-52,W-220,104,22); ctx.fillStyle=C.card; ctx.fill(); ctx.strokeStyle=C.line; ctx.lineWidth=2; ctx.stroke();
+        txt(h,150,y-18,"700 22px 'JetBrains Mono'",C.red,'left',1,4); txt(m,150,y+20,"500 34px Inter",C.text,'left'); ctx.restore(); });
+      capY=1640;
+    }
+  }
+  else if(t<28.75){                                     // 5 — FREE map / members
+    ctx.fillStyle='#07070a'; ctx.fillRect(0,0,W,H);
+    drawMap(t,1,1,1,null);
+    ctx.fillStyle='rgba(7,7,10,.55)'; ctx.fillRect(0,0,W,H);
+    const fa=ss(24.5,24.8,t);
+    ctx.save(); ctx.globalAlpha=fa; const s=eob((t-24.5)/.35); ctx.translate(W/2,560); ctx.scale(s,s);
+    rrect(-230,-50,460,100,50); ctx.fillStyle=C.text; ctx.fill(); txt('CARTE · GRATUITE',0,2,"700 34px 'JetBrains Mono'",'#0a0a0c','center',1,4); ctx.restore();
+    placeCard(t, ss(26.1,26.35,t), eob((t-26.1)/.3), true, W/2, 1000);
+    capY=1500;
+  }
+  else if(t<31.0){                                      // 6 — URL
+    const lt=t-28.75;
+    photo(t,1,lerp(1.3,1.42,lt/2.25),.62,.9);
+    const f=Math.floor(t*FPS);
+    glitch('URBEX-FRANCE.COM',W/2,H*.5,"128px Anton",1-ss(.3,.75,lt),500+f);
+    flash=(1-ss(0,.15,lt))*.5; shake=(1-ss(0,.3,lt))*12; showCap=false;
+  }
+  else {                                                // 7 — CTA
+    const lt=t-31.0;
+    photo(t,1,lerp(1.42,1.5,clamp(lt/7)),.7,.9);
+    txt('URBEX-FRANCE.COM',W/2,H*.5-330,"110px Anton",C.text,'center',1,2);
+    // subscribe button
+    const tap=32.9, a=ss(31.1,31.35,t), s=eob((t-31.1)/.35)*(1-.06*ss(tap-.05,tap,t)*(1-ss(tap,tap+.12,t))), done=t>=tap+.05;
+    ctx.save(); ctx.globalAlpha=a; ctx.translate(W/2,H*.5-130); ctx.scale(s,s);
+    const bw=done?470:540, bh=116; ctx.shadowColor='rgba(0,0,0,.7)'; ctx.shadowBlur=40; rrect(-bw/2,-bh/2,bw,bh,bh/2); ctx.fillStyle=done?'#2a2a2e':C.red; ctx.fill(); ctx.shadowBlur=0;
+    ctx.font="700 46px Inter"; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillStyle='#fff'; ctx.fillText(done?'ABONNÉ':'S’ABONNER',done?-12:0,2);
+    if(done){ const ring=t>tap+.35?Math.sin((t-tap-.35)*28)*.45*Math.exp(-(t-tap-.35)*3.2):0; bell(bw/2-60,0,1.25,ring,'#fff'); }
+    ctx.restore();
+    const fa=ss(tap-.5,tap-.3,t)*(1-ss(tap+.35,tap+.6,t));
+    if(fa>0){ const fx=lerp(W/2+300,W/2+70,eo((t-(tap-.5))/.45)), fy=lerp(H*.5+140,H*.5-116,eo((t-(tap-.5))/.45));
+      ctx.save(); ctx.globalAlpha=fa; ctx.fillStyle='rgba(255,255,255,.9)'; ctx.beginPath(); ctx.arc(fx,fy,26,0,6.283); ctx.fill();
+      if(t>tap){ const rp=clamp((t-tap)/.45); ctx.strokeStyle=`rgba(255,255,255,${1-rp})`; ctx.lineWidth=4; ctx.beginPath(); ctx.arc(fx,fy,26+rp*70,0,6.283); ctx.stroke(); } ctx.restore(); }
+    // signature
+    const sa=ss(35.0,35.4,t);
+    txt('présenté par',W/2,1500,"400 28px 'JetBrains Mono'",C.dim,'center',sa,6);
+    notrace(W/2,1590,96,eo(ss(35.3,35.6,t)),sa);
+    capY=1180+80;
+    ctx.fillStyle=`rgba(0,0,0,${ss(37.5,37.95,t)})`; ctx.fillRect(0,0,W,H);
+  }
+
+  // captions
+  const li=lineAt(t);
+  if(showCap && li>=0 && ![2,3,4,5,12].includes(li)) caption(TL[li],t,capY, li===6?64:54);
+
+  // post
+  if(shake>0){ const img=ctx.getImageData(0,0,W,H), dx=Math.round((hash(t*91)-.5)*shake), dy=Math.round((hash(t*37)-.5)*shake); ctx.fillStyle='#000'; ctx.fillRect(0,0,W,H); ctx.putImageData(img,dx,dy); }
+  if(flash>0){ ctx.fillStyle=`rgba(255,250,240,${flash*.8})`; ctx.fillRect(0,0,W,H); }
+  const v=ctx.createRadialGradient(W/2,H*.45,H*.28,W/2,H*.45,H*.78); v.addColorStop(0,'rgba(0,0,0,0)'); v.addColorStop(1,'rgba(0,0,0,.65)'); ctx.fillStyle=v; ctx.fillRect(0,0,W,H);
+  ctx.save(); ctx.globalCompositeOperation='overlay'; ctx.globalAlpha=.15; ctx.drawImage(GRAIN[Math.floor(t*FPS)%8],0,0,W,H); ctx.restore();
+  ctx.restore();
+}
+window.render=render;
+window.ready=Promise.all(IMG.map(i=>i.decode())).then(()=>document.fonts.ready).then(()=>Promise.all([document.fonts.load("128px Anton"),document.fonts.load("700 30px 'JetBrains Mono'"),document.fonts.load("500 30px 'JetBrains Mono'"),document.fonts.load("400 30px 'JetBrains Mono'"),document.fonts.load("600 50px Inter"),document.fonts.load("700 50px Inter"),document.fonts.load("500 50px Inter")])).then(()=>true);
+</script>
+</body></html>

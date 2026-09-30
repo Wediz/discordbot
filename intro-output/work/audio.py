@@ -58,7 +58,7 @@ Lc = int(.012*SR); add(fx, 10.15, hp(rng.standard_normal(Lc), 2000)*np.exp(-np.a
 w = wave.open('whisper.wav'); v = np.frombuffer(w.readframes(w.getnframes()), '<i2')/32768
 if w.getnchannels() == 2: v = v.reshape(-1, 2).mean(1)
 v = v/np.abs(v).max(); idx = np.where(np.abs(v) > .02)[0]; v = v[max(0, idx[0]-200):idx[-1]+2000]
-voice = np.zeros(N); add(voice, 7.85, v*.95)
+voice = np.zeros(N)   # voice tag removed: synthetic whisper didn't sound natural
 
 def reverb(x, seed, secs=2.2):
     r = np.random.default_rng(seed); L = int(secs*SR)

@@ -8,3 +8,5 @@ work/notrace_vo.wav
 work/face*.png
 work/whisper_raw.wav
 work/whisper.wav
+work/whisper_b_raw.wav
+work/whisper_b.wav

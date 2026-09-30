@@ -55,17 +55,18 @@ hit(7.3, 1.25)
 tt, e = env(.003, .4, 1.8); add(fx, 7.65, (np.sin(2*np.pi*1174.66*tt)+.5*np.sin(2*np.pi*880*tt))*e*.07)
 Lc = int(.012*SR); add(fx, 10.15, hp(rng.standard_normal(Lc), 2000)*np.exp(-np.arange(Lc)/SR/.002)*.3)
 # voice tag
-w = wave.open('notrace_vo.wav'); v = np.frombuffer(w.readframes(w.getnframes()), '<i2')/32768
+w = wave.open('whisper.wav'); v = np.frombuffer(w.readframes(w.getnframes()), '<i2')/32768
 if w.getnchannels() == 2: v = v.reshape(-1, 2).mean(1)
 v = v/np.abs(v).max(); idx = np.where(np.abs(v) > .02)[0]; v = v[max(0, idx[0]-200):idx[-1]+2000]
-voice = np.zeros(N); add(voice, 7.45, v)
+voice = np.zeros(N); add(voice, 7.85, v*.95)
 
 def reverb(x, seed, secs=2.2):
     r = np.random.default_rng(seed); L = int(secs*SR)
     ir = lp(r.standard_normal(L)*np.exp(-np.arange(L)/SR/.45), 6000); ir /= np.sqrt((ir**2).sum())
     n = len(x)+L; nf = 1 << (n-1).bit_length()
     return np.fft.irfft(np.fft.rfft(x, nf)*np.fft.rfft(ir, nf), nf)[:len(x)]
-mix = np.stack([hp(dry+fx*.7+reverb(fx+dry*.2+voice*.25, s)*.45, 28)*.7 + voice*.9 for s in (1, 2)], 1)
+vd = np.convolve(np.abs(voice), np.ones(SR//10)/(SR//10), 'same'); vd = 1-.5*np.clip(vd/(vd.max()+1e-9)*2, 0, 1)
+mix = np.stack([hp((dry+fx*.7)*vd+reverb(fx+dry*.2+voice*.08, s)*.45, 28)*.7 + voice*1.0 for s in (1, 2)], 1)
 mix /= np.abs(mix).max(); mix = np.tanh(mix*1.6)/np.tanh(1.6); mix *= 10**(-1/20)/np.abs(mix).max()
 mix *= (1-ss(10.3, 10.5, t))[:, None]
 with wave.open('audio.wav', 'wb') as o:

@@ -6,3 +6,5 @@ work/sheet_*.jpg
 work/audio.wav
 work/notrace_vo.wav
 work/face*.png
+work/whisper_raw.wav
+work/whisper.wav

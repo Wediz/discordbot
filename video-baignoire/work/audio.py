@@ -1,6 +1,6 @@
 import numpy as np, wave
 
-SR, DUR = 48000, 15.0
+SR, DUR = 48000, 17.0
 N = int(SR*DUR); t = np.arange(N)/SR
 rng = np.random.default_rng(8)
 def lp(x, fc):
@@ -33,14 +33,14 @@ mel = [76, 74, 72, 74, 76, 76, 76, None, 74, 74, 74, None, 76, 79, 79, None,
 t0 = .35
 for i, ch in enumerate(prog):
     bar = t0 + i*4*b
-    if bar > 14.2: break
+    if bar > 16.2: break
     add(bar, mallet(ch[0]-12, .55), pan=-.2)
     add(bar+2*b, mallet(ch[0]-12+7 if ch[0] < 60 else ch[0]-5, .4), pan=-.2)
     for k in range(4):                                   # gentle arpeggio on the off-beats
         add(bar+k*b+b/2, bell(ch[k % 3], .22, 1.2), pan=.35)
 for j, m in enumerate(mel):
     tt0 = t0 + j*b
-    if m is None or tt0 > 14.0: continue
+    if m is None or tt0 > 16.0: continue
     add(tt0, bell(m, .5), pan=.1)
 
 # pad
@@ -49,7 +49,7 @@ for i, ch in enumerate(prog):
     a, z = t0+i*4*b, t0+(i+1)*4*b
     m = (t > a) & (t < z+.6)
     for n in ch: pad[m] += np.sin(2*np.pi*mtof(n)*t[m])*.5 + np.sin(2*np.pi*mtof(n)*1.003*t[m])*.5
-pad = lp(pad, 900)*ss(0, 1.2, t)*(1-ss(14.2, 15, t))*.035
+pad = lp(pad, 900)*ss(0, 1.2, t)*(1-ss(16.2, 17, t))*.035
 add(0, pad, -.3); add(0, np.roll(pad, 600), .3)
 
 # water plops when captions pop, bubble pops, sparkle chime at the end card
@@ -60,7 +60,9 @@ for tc in (.4, 3.4, 6.4, 9.4): plop(tc, 1100, .3)
 r2 = np.random.default_rng(2)
 for k in range(14): plop(.8+r2.random()*13, 1600+r2.random()*1200, .07)
 for i, m in enumerate((84, 88, 91, 96)): add(12.85+i*.09, bell(m, .35, .9), pan=-.3+.2*i)
-add(13.4, bell(79, .45, 1.6)); add(13.4, bell(84, .3, 1.6), pan=.2)
+plop(13.3, 700, .35)
+for i, m in enumerate((79, 84, 88)): add(14.0+i*.08, bell(m, .4, 1.4), pan=-.2+.2*i)
+add(14.7, bell(91, .25, 1.2), pan=.3)
 # soft water ambience
 wn = lp(rng.standard_normal(N), 2500); wn /= np.abs(wn).max()
 add(0, wn*.018*(1-ss(12.2, 13, t)))
@@ -72,7 +74,7 @@ def reverb(x, seed, secs=2.0):
     return np.fft.irfft(np.fft.rfft(x, nf)*np.fft.rfft(ir, nf), nf)[:len(x)]
 mix = np.stack([L+reverb(L, 1)*.35, R+reverb(R, 2)*.35], 1)
 mix /= np.abs(mix).max(); mix = np.tanh(mix*1.2)/np.tanh(1.2); mix *= 10**(-1.5/20)/np.abs(mix).max()
-mix *= (1-ss(14.4, 15, t))[:, None]
+mix *= (1-ss(16.4, 17, t))[:, None]
 with wave.open('audio.wav', 'wb') as o:
     o.setnchannels(2); o.setsampwidth(2); o.setframerate(SR); o.writeframes((mix*32767).astype('<i2').tobytes())
 print('audio ok')

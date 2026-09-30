@@ -13,7 +13,7 @@ await page.goto('file://' + process.cwd() + '/comp.html');
 await page.evaluate(() => window.ready);
 const times = mode === 'stills'
   ? process.argv.slice(3).map(Number)
-  : Array.from({ length: 15 * 30 }, (_, i) => i / 30);
+  : Array.from({ length: 17 * 30 }, (_, i) => i / 30);
 for (const [i, t] of times.entries()) {
   const data = await page.evaluate(t => { render(t); return document.getElementById('c').toDataURL('image/jpeg', 0.94); }, t);
   const name = mode === 'stills' ? `s_${t.toFixed(2)}.jpg` : `f_${String(i).padStart(4, '0')}.jpg`;

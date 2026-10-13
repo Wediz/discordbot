@@ -32,7 +32,7 @@
       "min": 165,
       "voStart": 14,
       "say": "Semelle intermédiaire EnergyCell : une mousse qui amortit les chocs. Drop de quatre millimètres.",
-      "caption": "Semelle intermédiaire EnergyCell : une mousse qui amortit les chocs. Drop de 4 mm."
+      "caption": "Semelle intermédiaire EnergyCell : une mousse qui amortit les chocs. Drop de 4\u00a0mm."
     },
     {
       "id": "debris",
@@ -60,7 +60,7 @@
       "min": 165,
       "voStart": 14,
       "say": "Environ trois cent vingt grammes, et une tige mi-montante qui couvre la cheville.",
-      "caption": "Environ 320 g, et une tige mi-montante qui couvre la cheville."
+      "caption": "Environ 320\u00a0g, et une tige mi-montante qui couvre la cheville."
     },
     {
       "id": "hero",

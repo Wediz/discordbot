@@ -27,3 +27,15 @@ free-tool-strategy borghei/Claude-Skills@5318eda16c134c500c237425404975545c0eedd
 frontend-design anthropics/skills@8a1541c4a3ffa5a20a5a91de0dcf3f0bab1d1ef4:skills/frontend-design
 webapp-testing anthropics/skills@8a1541c4a3ffa5a20a5a91de0dcf3f0bab1d1ef4:skills/webapp-testing
 mcp-builder anthropics/skills@8a1541c4a3ffa5a20a5a91de0dcf3f0bab1d1ef4:skills/mcp-builder
+remotion-best-practices remotion-dev/skills@7ba4dcf8ebe1626b00baa41e1f2478113719b60b:skills/remotion-best-practices
+remotion-captions remotion-dev/skills@7ba4dcf8ebe1626b00baa41e1f2478113719b60b:skills/remotion-captions
+remotion-create remotion-dev/skills@7ba4dcf8ebe1626b00baa41e1f2478113719b60b:skills/remotion-create
+remotion-docs remotion-dev/skills@7ba4dcf8ebe1626b00baa41e1f2478113719b60b:skills/remotion-docs
+remotion-interactivity remotion-dev/skills@7ba4dcf8ebe1626b00baa41e1f2478113719b60b:skills/remotion-interactivity
+remotion-maps remotion-dev/skills@7ba4dcf8ebe1626b00baa41e1f2478113719b60b:skills/remotion-maps
+remotion-markup remotion-dev/skills@7ba4dcf8ebe1626b00baa41e1f2478113719b60b:skills/remotion-markup
+remotion-multimedia remotion-dev/skills@7ba4dcf8ebe1626b00baa41e1f2478113719b60b:skills/remotion-multimedia
+remotion-render remotion-dev/skills@7ba4dcf8ebe1626b00baa41e1f2478113719b60b:skills/remotion-render
+remotion-saas remotion-dev/skills@7ba4dcf8ebe1626b00baa41e1f2478113719b60b:skills/remotion-saas
+remotion-studio remotion-dev/skills@7ba4dcf8ebe1626b00baa41e1f2478113719b60b:skills/remotion-studio
+remotion-upgrade remotion-dev/skills@7ba4dcf8ebe1626b00baa41e1f2478113719b60b:skills/remotion-upgrade

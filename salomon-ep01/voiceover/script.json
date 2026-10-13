@@ -1,0 +1,80 @@
+{
+  "_aide": "Texte de la voix off. 'say' = ce que la voix prononce (chiffres en toutes lettres), 'caption' = sous-titre affiché (null = pas de sous-titre). 'min' = durée minimale de la séquence en images (30 = 1 s), 'voStart' = moment où la voix démarre dans la séquence. Après modification : npm run voice puis npm run audio.",
+  "voice": {
+    "model": "fr_FR-tom-medium",
+    "length_scale": 1.0,
+    "sentence_silence": 0.25
+  },
+  "segments": [
+    {
+      "id": "intro",
+      "min": 120,
+      "voStart": 16,
+      "say": "Urbex France. Présentation matériel, épisode un.",
+      "caption": null
+    },
+    {
+      "id": "reveal",
+      "min": 210,
+      "voStart": 22,
+      "say": "La Salomon Speed Assault 2. Une chaussure tactique mi-montante. Et voici pourquoi elle a sa place en urbex.",
+      "caption": "La Salomon Speed Assault 2. Une chaussure tactique mi-montante. Et voici pourquoi elle a sa place en urbex."
+    },
+    {
+      "id": "grip",
+      "min": 180,
+      "voStart": 14,
+      "say": "Semelle Mud Contagrip : des crampons profonds, à arêtes vives. Elle accroche dans la boue et sur les sols meubles.",
+      "caption": "Semelle Mud Contagrip : crampons profonds, à arêtes vives. Elle accroche dans la boue et sur les sols meubles."
+    },
+    {
+      "id": "cushion",
+      "min": 165,
+      "voStart": 14,
+      "say": "Semelle intermédiaire EnergyCell : une mousse qui amortit les chocs. Drop de quatre millimètres.",
+      "caption": "Semelle intermédiaire EnergyCell : une mousse qui amortit les chocs. Drop de 4 mm."
+    },
+    {
+      "id": "debris",
+      "min": 165,
+      "voStart": 14,
+      "say": "Languette à soufflet et mesh anti-débris : gravillons et poussière restent dehors.",
+      "caption": "Languette à soufflet et mesh anti-débris : gravillons et poussière restent dehors."
+    },
+    {
+      "id": "laces",
+      "min": 165,
+      "voStart": 14,
+      "say": "Laçage Quicklace : on serre en un seul geste, et le lacet se range dans sa poche. Rien ne traîne.",
+      "caption": "Laçage Quicklace : serrage en un seul geste, lacet rangé dans sa poche. Rien ne traîne."
+    },
+    {
+      "id": "stealth",
+      "min": 150,
+      "voStart": 14,
+      "say": "Matériaux non réfléchissants, tout en noir : elle reste discrète dans la pénombre.",
+      "caption": "Matériaux non réfléchissants, tout en noir : elle reste discrète dans la pénombre."
+    },
+    {
+      "id": "weight",
+      "min": 165,
+      "voStart": 14,
+      "say": "Environ trois cent vingt grammes, et une tige mi-montante qui couvre la cheville.",
+      "caption": "Environ 320 g, et une tige mi-montante qui couvre la cheville."
+    },
+    {
+      "id": "hero",
+      "min": 135,
+      "voStart": 20,
+      "say": "Salomon Speed Assault 2. Prête pour le terrain.",
+      "caption": null
+    },
+    {
+      "id": "outro",
+      "min": 150,
+      "voStart": 18,
+      "say": "Urbex France. Tous les spots sur urbex france point com.",
+      "caption": null
+    }
+  ]
+}

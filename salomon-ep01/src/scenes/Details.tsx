@@ -2,7 +2,7 @@ import React from 'react';
 import {AbsoluteFill, Img, Sequence, staticFile, useCurrentFrame, useVideoConfig} from 'remotion';
 import {EASE, tween} from '../anim';
 import {RiseText} from '../components/Reveal';
-import {DETAILS, TIMING, type Detail} from '../content';
+import {FEATURES, segment, type Feature} from '../content';
 import {COLORS, FONTS} from '../theme';
 
 /** Fenêtre « caméra » : position et taille à l'écran. */
@@ -23,7 +23,7 @@ const Grid: React.FC<{offset: number}> = ({offset}) => (
 );
 
 /** Un détail : gros plan avec caméra simulée, viseur, annotation et titre. */
-export const DetailShot: React.FC<{detail: Detail; index: number; total: number; duration: number}> = ({
+export const DetailShot: React.FC<{detail: Feature; index: number; total: number; duration: number}> = ({
 	detail,
 	index,
 	total,
@@ -171,28 +171,49 @@ export const DetailShot: React.FC<{detail: Detail; index: number; total: number;
 					{String(index + 1).padStart(2, '0')} / {String(total).padStart(2, '0')}
 					<div style={{flex: 1, height: 2, background: COLORS.boneFaint}} />
 				</div>
-				<RiseText delay={8} exitAt={duration - 10} style={{marginTop: 14, fontFamily: FONTS.display, fontSize: 132, lineHeight: 1.05, color: COLORS.bone, whiteSpace: 'nowrap'}}>
-					{detail.word}
+				<RiseText delay={8} exitAt={duration - 10} style={{marginTop: 14, fontFamily: FONTS.display, fontSize: 140, lineHeight: 1.05, color: COLORS.bone, whiteSpace: 'nowrap'}}>
+					{detail.title}
 				</RiseText>
-				<RiseText delay={16} exitAt={duration - 10} style={{marginTop: 18, fontFamily: FONTS.condensed, fontWeight: 500, fontSize: 46, lineHeight: 1.2, color: COLORS.boneDim}}>
-					{detail.note}
-				</RiseText>
+				<div style={{display: 'flex', flexWrap: 'wrap', gap: 16, marginTop: 22}}>
+					{detail.specs.map((spec, i) => (
+						<div
+							key={spec}
+							style={{
+								fontFamily: FONTS.mono,
+								fontWeight: 500,
+								fontSize: 32,
+								letterSpacing: '0.06em',
+								color: i === 0 ? COLORS.black : COLORS.bone,
+								background: i === 0 ? COLORS.orange : 'transparent',
+								border: `2px solid ${i === 0 ? COLORS.orange : COLORS.boneFaint}`,
+								padding: '8px 16px',
+								opacity: tween(frame, [18 + i * 5, 26 + i * 5], [0, 1]) * (1 - tween(frame, [duration - 10, duration - 2], [0, 1])),
+								translate: `${tween(frame, [18 + i * 5, 30 + i * 5], [-24, 0])}px 0px`,
+							}}
+						>
+							{spec}
+						</div>
+					))}
+				</div>
 			</div>
 		</AbsoluteFill>
 	);
 };
 
-/** 00:10 → 00:18 — Trois détails visuels. */
+/** Les 6 caractéristiques, chacune calée sur sa phrase de voix off. */
 export const Details: React.FC = () => {
 	const {fps} = useVideoConfig();
-	const each = Math.floor(TIMING.details / DETAILS.length);
+	const first = segment(FEATURES[0].id).from;
 	return (
 		<AbsoluteFill style={{background: COLORS.black}}>
-			{DETAILS.map((d, i) => (
-				<Sequence key={d.word} name={d.word} from={i * each} durationInFrames={each} premountFor={fps}>
-					<DetailShot detail={d} index={i} total={DETAILS.length} duration={each} />
-				</Sequence>
-			))}
+			{FEATURES.map((f, i) => {
+				const seg = segment(f.id);
+				return (
+					<Sequence key={f.id} name={f.title} from={seg.from - first} durationInFrames={seg.duration} premountFor={fps}>
+						<DetailShot detail={f} index={i} total={FEATURES.length} duration={seg.duration} />
+					</Sequence>
+				);
+			})}
 		</AbsoluteFill>
 	);
 };

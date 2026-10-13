@@ -1,7 +1,7 @@
 import React from 'react';
 import {AbsoluteFill, useCurrentFrame, useVideoConfig} from 'remotion';
 import {tween} from '../anim';
-import {TEXTS, TIMING} from '../content';
+import {segment, TEXTS} from '../content';
 import {COLORS, FONTS} from '../theme';
 
 const mono: React.CSSProperties = {
@@ -30,13 +30,9 @@ export const Hud: React.FC<{from: number; to: number}> = ({from, to}) => {
 	const ff = String(frame % fps).padStart(2, '0');
 	const tc = `00:00:${String(s).padStart(2, '0')}:${ff}`;
 
-	const bounds = [
-		TIMING.intro,
-		TIMING.intro + TIMING.reveal,
-		TIMING.intro + TIMING.reveal + TIMING.details,
-		TIMING.intro + TIMING.reveal + TIMING.details + TIMING.hero,
-	];
-	const segment = bounds.filter((b) => frame >= b).length - 1;
+	// 3 repères : révélation, caractéristiques, hero.
+	const bounds = [segment('reveal').from, segment('grip').from, segment('hero').from];
+	const segment_ = bounds.filter((b) => frame >= b).length - 1;
 
 	return (
 		<AbsoluteFill style={{opacity, pointerEvents: 'none'}}>
@@ -51,7 +47,7 @@ export const Hud: React.FC<{from: number; to: number}> = ({from, to}) => {
 			</div>
 			<div style={{position: 'absolute', left: 112, right: 112, bottom: 70, display: 'flex', gap: 10}}>
 				{[0, 1, 2].map((i) => (
-					<div key={i} style={{flex: 1, height: 4, background: i <= segment ? COLORS.orange : COLORS.boneFaint, opacity: i === segment ? 1 : 0.6}} />
+					<div key={i} style={{flex: 1, height: 4, background: i <= segment_ ? COLORS.orange : COLORS.boneFaint, opacity: i === segment_ ? 1 : 0.6}} />
 				))}
 			</div>
 		</AbsoluteFill>

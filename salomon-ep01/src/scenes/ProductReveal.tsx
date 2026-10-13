@@ -3,7 +3,7 @@ import {AbsoluteFill, Img, staticFile, useCurrentFrame} from 'remotion';
 import {EASE, pulse, tween} from '../anim';
 import {LightFlash} from '../components/Light';
 import {RiseText} from '../components/Reveal';
-import {IMAGES, TEXTS} from '../content';
+import {IMAGES, segment, TEXTS} from '../content';
 import {COLORS, FONTS} from '../theme';
 
 /** Bascule entre le plan de profil et le plan 3/4. */
@@ -46,7 +46,7 @@ const LitShoe: React.FC<{
 };
 
 /** 00:04 → 00:10 — Révélation progressive de la chaussure. */
-export const ProductReveal: React.FC = () => {
+export const ProductReveal: React.FC<{duration?: number}> = ({duration = segment('reveal').duration}) => {
 	const frame = useCurrentFrame();
 
 	// ── Plan A : profil, sorti de l'obscurité par un balayage lumineux
@@ -58,7 +58,7 @@ export const ProductReveal: React.FC = () => {
 	const b = frame - CUT;
 	const bW = 960;
 	const bH = (bW * IMAGES.shoe34.h) / IMAGES.shoe34.w;
-	const exit = tween(frame, [166, 180], [0, 1], EASE.in);
+	const exit = tween(frame, [duration - 14, duration], [0, 1], EASE.in);
 
 	return (
 		<AbsoluteFill style={{background: COLORS.black, overflow: 'hidden'}}>
@@ -100,7 +100,7 @@ export const ProductReveal: React.FC = () => {
 
 			{frame >= CUT - 2 ? (
 				<AbsoluteFill style={{opacity: tween(frame, [CUT - 2, CUT + 3], [0, 1], EASE.inOut)}}>
-					<Ambience x={tween(b, [0, 102], [-30, 30], EASE.soft)} opacity={0.4} />
+					<Ambience x={tween(b, [0, duration - CUT], [-30, 30], EASE.soft)} opacity={0.4} />
 					{/* Lueur de signalisation derrière le produit */}
 					<AbsoluteFill
 						style={{
@@ -124,9 +124,9 @@ export const ProductReveal: React.FC = () => {
 						<div
 							style={{
 								marginTop: 330,
-								rotate: `y ${tween(b, [0, 100], [10, -3], EASE.soft)}deg`,
-								translate: `${tween(b, [0, 100], [-40, 20], EASE.soft)}px ${tween(b, [0, 100], [20, -10], EASE.soft)}px`,
-								scale: `${tween(b, [0, 100], [1.0, 1.07], EASE.soft) + exit * 0.25}`,
+								rotate: `y ${tween(b, [0, duration - CUT], [10, -3], EASE.soft)}deg`,
+								translate: `${tween(b, [0, duration - CUT], [-40, 20], EASE.soft)}px ${tween(b, [0, duration - CUT], [20, -10], EASE.soft)}px`,
+								scale: `${tween(b, [0, duration - CUT], [1.0, 1.07], EASE.soft) + exit * 0.25}`,
 								filter: `blur(${exit * 14}px)`,
 							}}
 						>

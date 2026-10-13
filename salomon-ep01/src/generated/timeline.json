@@ -1,0 +1,214 @@
+{
+ "fps": 30,
+ "bpm": 100,
+ "total": 2034,
+ "segments": [
+  {
+   "id": "intro",
+   "from": 0,
+   "duration": 126,
+   "vo": {
+    "file": null,
+    "from": 16,
+    "duration": 100,
+    "estimated": true
+   },
+   "captions": []
+  },
+  {
+   "id": "reveal",
+   "from": 126,
+   "duration": 270,
+   "vo": {
+    "file": null,
+    "from": 22,
+    "duration": 222,
+    "estimated": true
+   },
+   "captions": [
+    {
+     "text": "La Salomon Speed Assault 2.",
+     "from": 22,
+     "duration": 57
+    },
+    {
+     "text": "Une chaussure tactique mi-montante.",
+     "from": 79,
+     "duration": 74
+    },
+    {
+     "text": "Et voici pourquoi elle a sa place en urbex.",
+     "from": 153,
+     "duration": 91
+    }
+   ]
+  },
+  {
+   "id": "grip",
+   "from": 396,
+   "duration": 270,
+   "vo": {
+    "file": null,
+    "from": 14,
+    "duration": 236,
+    "estimated": true
+   },
+   "captions": [
+    {
+     "text": "Semelle Mud Contagrip :",
+     "from": 14,
+     "duration": 50
+    },
+    {
+     "text": "crampons profonds, à arêtes vives.",
+     "from": 64,
+     "duration": 74
+    },
+    {
+     "text": "Elle accroche dans la boue et sur les sols meubles.",
+     "from": 139,
+     "duration": 111
+    }
+   ]
+  },
+  {
+   "id": "cushion",
+   "from": 666,
+   "duration": 234,
+   "vo": {
+    "file": null,
+    "from": 14,
+    "duration": 199,
+    "estimated": true
+   },
+   "captions": [
+    {
+     "text": "Semelle intermédiaire EnergyCell :",
+     "from": 14,
+     "duration": 84
+    },
+    {
+     "text": "une mousse qui amortit les chocs. Drop de 4 mm.",
+     "from": 98,
+     "duration": 115
+    }
+   ]
+  },
+  {
+   "id": "debris",
+   "from": 900,
+   "duration": 198,
+   "vo": {
+    "file": null,
+    "from": 14,
+    "duration": 170,
+    "estimated": true
+   },
+   "captions": [
+    {
+     "text": "Languette à soufflet et mesh anti-débris :",
+     "from": 14,
+     "duration": 88
+    },
+    {
+     "text": "gravillons et poussière restent dehors.",
+     "from": 102,
+     "duration": 82
+    }
+   ]
+  },
+  {
+   "id": "laces",
+   "from": 1098,
+   "duration": 234,
+   "vo": {
+    "file": null,
+    "from": 14,
+    "duration": 201,
+    "estimated": true
+   },
+   "captions": [
+    {
+     "text": "Laçage Quicklace :",
+     "from": 14,
+     "duration": 43
+    },
+    {
+     "text": "serrage en un seul geste, lacet rangé dans sa poche.",
+     "from": 57,
+     "duration": 123
+    },
+    {
+     "text": "Rien ne traîne.",
+     "from": 180,
+     "duration": 35
+    }
+   ]
+  },
+  {
+   "id": "stealth",
+   "from": 1332,
+   "duration": 198,
+   "vo": {
+    "file": null,
+    "from": 14,
+    "duration": 170,
+    "estimated": true
+   },
+   "captions": [
+    {
+     "text": "Matériaux non réfléchissants, tout en noir :",
+     "from": 14,
+     "duration": 92
+    },
+    {
+     "text": "elle reste discrète dans la pénombre.",
+     "from": 106,
+     "duration": 78
+    }
+   ]
+  },
+  {
+   "id": "weight",
+   "from": 1530,
+   "duration": 198,
+   "vo": {
+    "file": null,
+    "from": 14,
+    "duration": 168,
+    "estimated": true
+   },
+   "captions": [
+    {
+     "text": "Environ 320 g, et une tige mi-montante qui couvre la cheville.",
+     "from": 14,
+     "duration": 168
+    }
+   ]
+  },
+  {
+   "id": "hero",
+   "from": 1728,
+   "duration": 144,
+   "vo": {
+    "file": null,
+    "from": 20,
+    "duration": 98,
+    "estimated": true
+   },
+   "captions": []
+  },
+  {
+   "id": "outro",
+   "from": 1872,
+   "duration": 162,
+   "vo": {
+    "file": null,
+    "from": 18,
+    "duration": 116,
+    "estimated": true
+   },
+   "captions": []
+  }
+ ]
+}

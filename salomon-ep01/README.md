@@ -1,19 +1,35 @@
 # Urbex France — Présentation Matériel EP.01 · Salomon Speed Assault 2
 
-Pub verticale de 25 s (1080 × 1920, 30 images/s, 750 images, MP4 H.264) faite avec Remotion.
+Présentation verticale d'environ 60 s (1080 × 1920, 30 images/s, MP4 H.264 + son AAC) faite avec Remotion :
+voix off, sous-titres, musique et bruitages originaux, 6 caractéristiques utiles en urbex.
 
 - **Vidéo finale** : `out/urbex-presentation-materiel-ep01.mp4`
 - **Captures de contrôle** : `stills/` (une ou plusieurs par séquence)
 
-## Les 5 séquences
+## Déroulé
 
-| Temps | Séquence | Fichier |
+| Séquence | Contenu | Fichier |
 |---|---|---|
-| 0 → 4 s | Intro : logo, PRÉSENTATION MATÉRIEL, ÉPISODE 01 | `src/scenes/Intro.tsx` |
-| 4 → 10 s | Révélation : profil sorti de l'ombre, puis 3/4 avec le titre | `src/scenes/ProductReveal.tsx` |
-| 10 → 18 s | Détails : DESIGN TACTIQUE, MOBILITÉ, TERRAIN | `src/scenes/Details.tsx` |
-| 18 → 22 s | Hero shot : SPEED ASSAULT 2 | `src/scenes/Hero.tsx` |
-| 22 → 25 s | Outro : logo + PRÉSENTATION MATÉRIEL — EP. 01 | `src/scenes/Outro.tsx` |
+| Intro | Logo, PRÉSENTATION MATÉRIEL, ÉPISODE 01 | `src/scenes/Intro.tsx` |
+| Révélation | Profil sorti de l'ombre, puis 3/4 avec le titre | `src/scenes/ProductReveal.tsx` |
+| Caractéristiques | Accroche, amorti, anti-débris, laçage, discrétion, légèreté | `src/scenes/Details.tsx` |
+| Hero shot | SPEED ASSAULT 2 | `src/scenes/Hero.tsx` |
+| Outro | Logo, EP. 01, urbex-france.com | `src/scenes/Outro.tsx` |
+
+Les durées ne sont pas fixées à la main : chaque séquence dure le temps de sa phrase
+de voix off, arrondi au temps de la musique (100 BPM), pour que les coupes tombent en rythme.
+
+## Caractéristiques citées (fiche officielle Salomon)
+
+- Semelle **Mud Contagrip** : crampons profonds à arêtes vives, pour sols meubles et boueux.
+- Semelle intermédiaire **EnergyCell** (mousse EVA qui amortit les chocs), **drop 4 mm** (26/22 mm).
+- **Languette à soufflet** et **mesh anti-débris**.
+- Laçage **Quicklace** avec poche de rangement du lacet.
+- Matériaux **non réfléchissants**.
+- Environ **320 g** la chaussure (version standard), **tige mi-montante**.
+
+Si une info change (autre version, Gore-Tex…), corrige le texte de la voix
+(`voiceover/script.json`) et les étiquettes (`src/content.ts` → `FEATURES`).
 
 ## Installation (une seule fois)
 
@@ -32,31 +48,45 @@ npm run studio
 Le navigateur s'ouvre sur Remotion Studio. La composition **SpeedAssault2** est la pub complète ;
 le dossier **Sequences** permet de voir chaque séquence séparément.
 
+## Son : voix off, musique, bruitages
+
+Il faut Python 3 avec `numpy` et `scipy` (`pip install numpy scipy piper-tts`).
+
+1. **Voix off** : `npm run voice`. Elle est générée avec Piper, une synthèse vocale gratuite qui
+   fonctionne sans connexion ; voix française d'homme `fr_FR-tom-medium`. Le modèle se télécharge
+   une fois depuis huggingface.co. Les pistes arrivent dans `public/audio/vo/`.
+   Pour mettre **ta propre voix**, enregistre une piste par séquence et nomme-la comme son `id`
+   (`intro.wav`, `reveal.wav`, `grip.wav`…) dans `public/audio/vo/`.
+2. **Montage + musique + bruitages** : `npm run audio`. Recalcule les durées d'après la voix, puis
+   recompose la musique et les bruitages pour qu'ils tombent pile sur les coupes.
+   Tant qu'il n'y a pas de voix, la durée est estimée d'après la longueur du texte.
+3. Volumes : `src/content.ts` → `VOLUME` (voix, musique, bruitages).
+
+La musique et les bruitages sont fabriqués par le script (synthèse) : aucun son externe, aucun droit à payer.
+
 ## Exporter le MP4
 
 ```bash
 npm run render
 ```
 
-Le fichier sort dans `out/urbex-presentation-materiel-ep01.mp4`.
-Si Remotion ne parvient pas à télécharger son navigateur, indiquer un Chrome local :
+Le fichier sort dans `out/urbex-presentation-materiel-ep01.mp4`, avec un son normalisé à −14 LUFS,
+le niveau standard des réseaux sociaux.
+Si Remotion ne parvient pas à télécharger son navigateur, indique un Chrome local :
 `REMOTION_BROWSER=/chemin/vers/chrome npm run render`.
 
 Captures de contrôle : `npm run stills` (ou `node scripts/stills.mjs 120 300` pour des images précises).
 
 ## Modifier les textes, les images et la durée
 
-**Tout se règle dans `src/content.ts`** :
-
-- **Textes** : bloc `TEXTS` (série, épisode, marque, modèle, ligne de fin, repère du haut).
-- **Détails** : bloc `DETAILS`. Pour chaque détail : le mot (`word`), la phrase (`note`),
-  l'étiquette (`label`), la photo utilisée, le cadrage de la caméra (`camFrom` → `camTo` :
-  point visé en pixels de l'image et zoom) et le point annoté (`target`).
-  Les phrases décrivent ce qui se voit sur les photos, sans promesse de performance.
-- **Durées** : bloc `TIMING`, en images (30 = 1 seconde). La durée totale se recalcule seule.
-  Les animations internes sont calées pour les durées actuelles : si tu rallonges beaucoup
-  une séquence, vérifie-la dans le Studio.
-- **Images** : bloc `IMAGES`. Pour changer de photo, la mettre dans `public/assets/`
+- **Voix off et sous-titres** : `voiceover/script.json` (`say` = ce qui est prononcé,
+  `caption` = sous-titre affiché). Ensuite : `npm run voice` puis `npm run audio`.
+- **Textes à l'écran** : `src/content.ts` → `TEXTS`.
+- **Caractéristiques** : `src/content.ts` → `FEATURES` (titre, données, étiquette, photo,
+  cadrage de la caméra `camFrom` → `camTo` en pixels de l'image + zoom, point annoté `target`).
+- **Durées** : automatiques. Pour allonger une séquence sans changer le texte, augmente son
+  `min` (en images, 30 = 1 s) dans `voiceover/script.json`, puis `npm run audio`.
+- **Images** : `src/content.ts` → `IMAGES`. Pour changer de photo, la mettre dans `public/assets/`
   et mettre à jour `src`, `w` et `h` (largeur et hauteur en pixels).
 
 **Couleurs et polices** : `src/theme.ts` (noir, anthracite, blanc cassé, orange signalisation ;
@@ -72,4 +102,4 @@ Uniquement les fichiers fournis, rangés dans `public/assets/source/`.
 - `hero-scene.jpg` : scène du visuel fourni, recadrée sans ses textes ;
 - `ambience-blur.jpg` : la même scène floutée, pour les fonds.
 
-Aucune musique, aucune vidéo externe, aucune API payante.
+Aucune vidéo, musique ou image externe, aucune API payante.

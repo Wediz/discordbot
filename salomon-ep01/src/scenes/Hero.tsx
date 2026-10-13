@@ -4,11 +4,11 @@ import {EASE, pulse, tween} from '../anim';
 import {Glitch} from '../components/Glitch';
 import {LightSweep} from '../components/Light';
 import {DrawLine, RiseText} from '../components/Reveal';
-import {IMAGES, TEXTS} from '../content';
+import {IMAGES, segment, TEXTS} from '../content';
 import {COLORS, FONTS} from '../theme';
 
 /** 00:18 → 00:22 — Grande photo, composition épurée, typographie massive. */
-export const Hero: React.FC = () => {
+export const Hero: React.FC<{duration?: number}> = ({duration = segment('hero').duration}) => {
 	const frame = useCurrentFrame();
 	const w = 1080;
 	const h = (w * IMAGES.heroScene.h) / IMAGES.heroScene.w;
@@ -16,7 +16,7 @@ export const Hero: React.FC = () => {
 
 	// Ouverture verticale depuis une ligne centrale.
 	const open = tween(frame, [0, 22], [50, 0], EASE.out);
-	const glitch = pulse(frame, 104, 116, 120);
+	const glitch = pulse(frame, duration - 16, duration - 4, duration);
 
 	return (
 		<AbsoluteFill style={{background: COLORS.black}}>
@@ -38,8 +38,8 @@ export const Hero: React.FC = () => {
 							style={{
 								width: w,
 								height: h,
-								scale: `${tween(frame, [0, 120], [1.16, 1.04], EASE.soft)}`,
-								translate: `${tween(frame, [0, 120], [24, -16], EASE.soft)}px 0px`,
+								scale: `${tween(frame, [0, duration], [1.16, 1.04], EASE.soft)}`,
+								translate: `${tween(frame, [0, duration], [24, -16], EASE.soft)}px 0px`,
 								filter: `brightness(${tween(frame, [0, 18], [1.8, 1])}) contrast(1.08) saturate(0.85)`,
 							}}
 						/>

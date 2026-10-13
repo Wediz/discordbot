@@ -3,19 +3,19 @@ import {AbsoluteFill, Img, staticFile, useCurrentFrame} from 'remotion';
 import {EASE, pulse, tween} from '../anim';
 import {Glitch} from '../components/Glitch';
 import {DrawLine} from '../components/Reveal';
-import {IMAGES, TEXTS} from '../content';
+import {IMAGES, segment, TEXTS} from '../content';
 import {COLORS, FONTS} from '../theme';
 
 /** 00:00 → 00:04 — Logo, titre de la série, numéro d'épisode. */
-export const Intro: React.FC = () => {
+export const Intro: React.FC<{duration?: number}> = ({duration = segment('intro').duration}) => {
 	const frame = useCurrentFrame();
 	const logoW = 840;
 	const logoH = (logoW * IMAGES.logo.h) / IMAGES.logo.w;
 
 	// Glitch : à l'apparition du logo, une réplique, puis à la sortie.
-	const glitch = Math.max(pulse(frame, 15, 18, 26), 0.5 * pulse(frame, 55, 56, 59), pulse(frame, 104, 118, 120));
+	const glitch = Math.max(pulse(frame, 15, 18, 26), 0.5 * pulse(frame, 55, 56, 59), pulse(frame, duration - 16, duration - 2, duration));
 
-	const exit = tween(frame, [104, 120], [0, 1], EASE.in);
+	const exit = tween(frame, [duration - 16, duration], [0, 1], EASE.in);
 
 	return (
 		<AbsoluteFill style={{background: COLORS.black}}>
@@ -27,7 +27,7 @@ export const Intro: React.FC = () => {
 				}}
 			/>
 
-			<AbsoluteFill style={{scale: `${tween(frame, [0, 120], [1.06, 1], EASE.soft) + exit * 0.05}`, opacity: 1 - exit * 0.6}}>
+			<AbsoluteFill style={{scale: `${tween(frame, [0, duration], [1.06, 1], EASE.soft) + exit * 0.05}`, opacity: 1 - exit * 0.6}}>
 				<Glitch intensity={glitch} seed="intro">
 					<AbsoluteFill style={{alignItems: 'center', justifyContent: 'center', flexDirection: 'column'}}>
 						{/* Ligne de balayage qui ouvre le logo */}

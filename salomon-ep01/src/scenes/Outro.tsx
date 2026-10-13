@@ -91,6 +91,21 @@ export const Outro: React.FC = () => {
 					{TEXTS.outroLine} <span style={{color: COLORS.orange}}>— {TEXTS.outroEpisode}</span>
 				</div>
 				<DrawLine from={34} duration={18} width={760} color={COLORS.orange} align="center" style={{marginTop: 26}} />
+				<div
+					style={{
+						marginTop: 70,
+						fontFamily: FONTS.mono,
+						fontWeight: 500,
+						fontSize: 48,
+						letterSpacing: '0.12em',
+						marginRight: '-0.12em',
+						color: COLORS.orange,
+						opacity: tween(frame, [44, 56], [0, 1]),
+						filter: `blur(${tween(frame, [44, 58], [8, 0])}px)`,
+					}}
+				>
+					{TEXTS.website}
+				</div>
 			</AbsoluteFill>
 		</AbsoluteFill>
 	);

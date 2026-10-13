@@ -1,0 +1,27 @@
+{
+  "name": "urbex-presentation-materiel-ep01",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Urbex France — Présentation Matériel EP.01 : Salomon Speed Assault 2 (pub verticale 25 s)",
+  "scripts": {
+    "studio": "remotion studio",
+    "render": "remotion render SpeedAssault2 out/brut.mp4 && remotion ffmpeg -y -i out/brut.mp4 -vf scale=out_range=tv:out_color_matrix=bt709,format=yuv420p -c:v libx264 -preset slow -crf 17 -color_range tv -colorspace bt709 -color_primaries bt709 -color_trc bt709 -movflags +faststart out/urbex-presentation-materiel-ep01.mp4",
+    "stills": "node scripts/stills.mjs",
+    "typecheck": "tsc --noEmit",
+    "assets": "python3 scripts/prepare_assets.py"
+  },
+  "dependencies": {
+    "@fontsource/anton": "^5.3.0",
+    "@fontsource/barlow-condensed": "^5.3.0",
+    "@fontsource/jetbrains-mono": "^5.3.0",
+    "@remotion/cli": "^4.0.535",
+    "@remotion/fonts": "^4.0.535",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "remotion": "^4.0.535"
+  },
+  "devDependencies": {
+    "@types/react": "^19.3.0",
+    "typescript": "^7.0.2"
+  }
+}

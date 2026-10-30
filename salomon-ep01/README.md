@@ -144,3 +144,34 @@ et deux éléments *Vidéo* sur les cadres de droite, sur les 15 dernières seco
 
 - **Textes** : en haut de `src/outro-urbex/OutroUrbex.tsx` (`OUTRO`).
 - **Son** : `npm run audio:outro` · **Export** : `npm run render:outro`.
+
+---
+
+# HUD Urbex (à superposer sur tes vidéos, 1920×1080, fond transparent)
+
+Compositions **HudUrbex** (transparent) et **HudApercu** (le même sur un fond, pour voir le rendu).
+
+**Ce qu'il affiche** : REC + compteur, lieu, heure qui défile, jauge **PEUR** (devient rouge et
+tremble au-dessus de 70 %, les bords de l'écran rougissent), **STRESS** (cœur qui bat + électrocardiogramme
+au rythme des BPM), **BATTERIE** de la lampe (clignote en rouge sous 20 %), et des **alertes** au centre.
+
+## Le modifier
+
+Tout se règle dans `src/hud/config.ts`, ou sans toucher au code dans **Remotion Studio**
+(`npm run studio` → dossier HUD → *HudUrbex* → panneau **Props** à droite) :
+
+- `dureeSecondes` : durée du HUD (mets la durée de ta vidéo) ;
+- `lieu`, `sousTitreLieu`, `heureDepart` (ex. `"02:47"`) ;
+- `peur` (0–100), `stress` (BPM), `batterie` (0–100) : listes de points `{t: seconde, v: valeur}`.
+  Ex. un sursaut à 12 s : `{t: 11, v: 20}, {t: 12, v: 90}` ;
+- `alertes` : `{t: 12, duree: 3, texte: "BRUIT SUSPECT"}` ;
+- `afficher` : coche/décoche chaque élément (REC, heure, lieu, jauges, effet de peur).
+
+## L'exporter
+
+- `npm run render:hud` → `out/hud-urbex-transparent.mov` (ProRes 4444 avec transparence :
+  Premiere Pro, DaVinci Resolve, Final Cut, After Effects) ;
+- `npm run render:hud-webm` → `out/hud-urbex-transparent.webm` (plus léger, transparence VP9) ;
+- `npm run render:hud-apercu` → `out/hud-urbex-apercu.mp4` (aperçu sur fond).
+
+Dans ton logiciel : place le fichier transparent **sur une piste au-dessus** de ta vidéo.

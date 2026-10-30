@@ -22,8 +22,8 @@ BONE = (0.925, 0.902, 0.855)
 DIM = (0.70, 0.68, 0.64)
 DARK = (0.03, 0.03, 0.035)
 
-FONT_TXT = ("Bahnschrift", "Regular")
-FONT_NUM = ("Consolas", "Regular")
+FONT_TXT = ("Bahnschrift", "Bold")
+FONT_NUM = ("Consolas", "Bold")
 FONT_SYM = ("Segoe UI Symbol", "Regular")
 
 tools: list[str] = []
@@ -41,6 +41,11 @@ def ny(py: float) -> float:
 
 def wrel(px: float) -> float:
     return round(px / W, 5)
+
+
+def hrel(px: float) -> float:
+    """Hauteur de masque et taille de texte : relatives à la hauteur de l'image."""
+    return round(px / H, 5)
 
 
 def view() -> str:
@@ -74,13 +79,14 @@ def rect(name: str, cx: float, cy: float, w: float, h: float, color, alpha: floa
 					ClippingMode = Input {{ Value = FuID {{ "None" }}, }},
 					Center = {center},
 					Width = {width},
-					Height = Input {{ Value = {wrel(h)}, }},
+					Height = Input {{ Value = {hrel(h)}, }},
 					CornerRadius = Input {{ Value = {radius}, }},
 				}},
 				{view()}
 			}},""")
     r, g, b = color
-    cr, cg, cb = (num(e) for e in color_expr) if color_expr else (num(r), num(g), num(b))
+    cr, cg, cb = ((num(f"({e})*{alpha}") for e in color_expr) if color_expr
+                  else (num(round(r * alpha, 4)), num(round(g * alpha, 4)), num(round(b * alpha, 4))))
     tools.append(f"""			{name} = Background {{
 				CtrlWZoom = false,
 				Inputs = {{
@@ -104,7 +110,7 @@ def text(name: str, cx: float, cy: float, size_px: float, value: str, color, fon
          color_expr: tuple[str, str, str] | None = None, spacing: float = 1.0) -> None:
     styled = (f'Input {{ Value = "{value}", Expression = "{expr}", }}' if expr
               else f'Input {{ Value = "{value}", }}')
-    size = num(size_expr) if size_expr else num(wrel(size_px))
+    size = num(size_expr) if size_expr else num(hrel(size_px))
     r, g, b = color
     cr, cg, cb = (num(e) for e in color_expr) if color_expr else (num(r), num(g), num(b))
     tools.append(f"""			{name} = TextPlus {{
@@ -191,6 +197,20 @@ def controls_tool() -> str:
 			}},"""
 
 
+def segments(prefix: str, x0: float, width: float, cy: float, h: float, n: int, show: str) -> None:
+    """Fines séparations sombres qui découpent une barre en segments."""
+    for i in range(1, n):
+        rect(f"{prefix}Gap{i}", x0 + width * i / n, cy, 5, h + 2, DARK, 0.92, show=show)
+
+
+def corners() -> None:
+    """Coins de cadrage façon caméra."""
+    m, ln, th = 30, 60, 3
+    for i, (x, y, sx, sy) in enumerate([(m, m, 1, 1), (W - m, m, -1, 1), (m, H - m, 1, -1), (W - m, H - m, -1, -1)]):
+        rect(f"CornerH{i}", x + sx * ln / 2, y + sy * th / 2, ln, th, BONE, 0.75, show=f"{C}.ShowRec")
+        rect(f"CornerV{i}", x + sx * th / 2, y + sy * ln / 2, th, ln, BONE, 0.75, show=f"{C}.ShowRec")
+
+
 def build() -> str:
     show = lambda key: f"{C}.{key}"  # noqa: E731
     secs = f"floor(time/{C}.IPS)"
@@ -207,8 +227,8 @@ def build() -> str:
 					ClippingMode = Input {{ Value = FuID {{ "None" }}, }},
 					Invert = Input {{ Value = 1, }},
 					SoftEdge = Input {{ Value = 0.25, }},
-					Width = Input {{ Value = 1.05, }},
-					Height = Input {{ Value = 0.62, }},
+					Width = Input {{ Value = 1.1, }},
+					Height = Input {{ Value = 1.12, }},
 				}},
 				{view()}
 			}},""")
@@ -220,15 +240,17 @@ def build() -> str:
 					Width = Input {{ Value = {W}, }},
 					Height = Input {{ Value = {H}, }},
 					UseFrameFormatSettings = Input {{ Value = 1, }},
-					TopLeftRed = Input {{ Value = 0.8, }},
-					TopLeftGreen = Input {{ Value = 0.06, }},
-					TopLeftBlue = Input {{ Value = 0.04, }},
+					TopLeftRed = Input {{ Value = 0.48, }},
+					TopLeftGreen = Input {{ Value = 0.036, }},
+					TopLeftBlue = Input {{ Value = 0.024, }},
 					TopLeftAlpha = Input {{ Value = 0.6, }},
 				}},
 				{view()}
 			}},""")
     chain.append(("FearVignette",
                   f"{C}.EffetPeur*min(1, max(0, ({C}.Peur-70)/30))*(0.8+0.2*sin(time/4))"))
+
+    corners()
 
     # REC + compteur
     text("RecDot", 88, 80, 34, "●", RED, FONT_SYM, show=f"{C}.ShowRec*iif(time % 30 < 18, 1, 0.15)")
@@ -261,6 +283,7 @@ def build() -> str:
          width_expr=f"{wrel(490)}*{C}.Peur/100",
          center_expr=f"Point({nx(85)} + {wrel(490)}*{C}.Peur/200, {ny(852)})",
          color_expr=(f"iif({danger}, {RED[0]}, {ORANGE[0]})", f"iif({danger}, {RED[1]}, {ORANGE[1]})", f"iif({danger}, {RED[2]}, {ORANGE[2]})"))
+    segments("Peur", 85, 490, 852, 20, 20, show("ShowPeur"))
 
     # STRESS (cœur qui bat au rythme des BPM)
     high = f"{C}.Stress >= 120"
@@ -268,7 +291,7 @@ def build() -> str:
     rect("StressBar", 62, 960, 5, 112, ORANGE, show=show("ShowStress"),
          color_expr=(f"iif({high}, {RED[0]}, {ORANGE[0]})", f"iif({high}, {RED[1]}, {ORANGE[1]})", f"iif({high}, {RED[2]}, {ORANGE[2]})"))
     text("Coeur", 100, 935, 30, "♥", RED, FONT_SYM, show=show("ShowStress"),
-         size_expr=f"{wrel(30)}*(1 + 0.25*max(0, sin(time/{C}.IPS*{C}.Stress/60*6.28318))^8)",
+         size_expr=f"{hrel(34)}*(1 + 0.25*max(0, sin(time/{C}.IPS*{C}.Stress/60*6.28318))^8)",
          color_expr=(f"iif({high}, {RED[0]}, {ORANGE[0]})", f"iif({high}, {RED[1]}, {ORANGE[1]})", f"iif({high}, {RED[2]}, {ORANGE[2]})"))
     text("TxtStress", 200, 935, 28, "STRESS", BONE, show=show("ShowStress"), spacing=1.15)
     text("TxtStressVal", 490, 935, 34, "80 BPM", BONE, FONT_NUM, show=show("ShowStress"),
@@ -280,6 +303,7 @@ def build() -> str:
          width_expr=f"{wrel(490)}*{level}",
          center_expr=f"Point({nx(85)} + {wrel(490)}*{level}/2, {ny(987)})",
          color_expr=(f"iif({high}, {RED[0]}, {ORANGE[0]})", f"iif({high}, {RED[1]}, {ORANGE[1]})", f"iif({high}, {RED[2]}, {ORANGE[2]})"))
+    segments("Stress", 85, 490, 987, 20, 20, show("ShowStress"))
 
     # BATTERIE de la lampe (clignote sous 20 %)
     low = f"{C}.Batterie < 20"
@@ -300,9 +324,10 @@ def build() -> str:
 
     # ALERTE au centre
     alert = f"{C}.Alerte*iif(time % 24 < 18, 1, 0.6)"
-    rect("AlertBorder", 960, 200, 780, 104, RED, show=f"{C}.Alerte")
-    rect("AlertPlate", 960, 200, 768, 92, (0.04, 0.025, 0.025), 0.9, show=f"{C}.Alerte")
-    text("TxtAlerte", 960, 200, 60, "BRUIT SUSPECT", BONE, show=alert, spacing=1.08)
+    rect("AlertBorder", 960, 200, 680, 104, RED, show=f"{C}.Alerte")
+    rect("AlertPlate", 960, 200, 668, 92, (0.04, 0.025, 0.025), 0.9, show=f"{C}.Alerte")
+    text("AlertIcon", 690, 198, 56, "⚠", RED, FONT_SYM, show=alert)
+    text("TxtAlerte", 990, 200, 60, "BRUIT SUSPECT", BONE, show=alert, spacing=1.08)
 
     # Chaîne de Merge (ordre d'affichage)
     merges = []

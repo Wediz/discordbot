@@ -21,7 +21,19 @@ def logo() -> None:
     if not src.exists():
         print("Logo absent :", src.relative_to(ROOT), "(à déposer)")
         return
-    im = Image.open(src).convert("RGB")
+    raw = Image.open(src)
+    if raw.mode == "RGBA" and np.asarray(raw)[..., 3].min() < 10:
+        # Fichier déjà détouré : on garde sa transparence, on recadre seulement.
+        rgba = raw.crop(raw.getchannel("A").point(lambda v: 255 if v > 8 else 0).getbbox())
+        side = max(rgba.size)  # carré transparent : pas de déformation à l'affichage
+        square = Image.new("RGBA", (side, side), (0, 0, 0, 0))
+        square.alpha_composite(rgba, ((side - rgba.width) // 2, (side - rgba.height) // 2))
+        rgba = square
+        BRAND.mkdir(parents=True, exist_ok=True)
+        rgba.save(BRAND / "logo-urbex-fr.png", optimize=True)
+        print("brand/logo-urbex-fr.png (transparence d'origine)", rgba.size)
+        return
+    im = raw.convert("RGB")
     arr = np.asarray(im).astype(np.int16)
     # Zone non blanche = le badge.
     ys, xs = np.nonzero(arr.min(axis=2) < 200)

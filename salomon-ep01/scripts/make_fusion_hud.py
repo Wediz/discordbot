@@ -26,6 +26,28 @@ FONT_TXT = ("Bahnschrift", "Bold")
 FONT_NUM = ("Consolas", "Bold")
 FONT_SYM = ("Segoe UI Symbol", "Regular")
 
+# Échelle du HUD (1 = grand, 0.6 = discret). Les éléments rétrécissent vers
+# leur coin d'écran (gauche/droite, haut/bas), le centre reste centré.
+SCALE = 0.6
+MARGIN = 30  # distance au bord conservée
+
+
+def X(px: float) -> float:
+    """Position horizontale après réduction vers le bord le plus proche."""
+    if abs(px - W / 2) < 380:  # bandeau central (alerte) : réduit vers le centre
+        return W / 2 + (px - W / 2) * SCALE
+    if px < W / 2:
+        return MARGIN + (px - MARGIN) * SCALE
+    return W - MARGIN - (W - MARGIN - px) * SCALE
+
+
+def Y(py: float) -> float:
+    """Position verticale après réduction vers le bord le plus proche."""
+    if py < H / 2:
+        return MARGIN + (py - MARGIN) * SCALE
+    return H - MARGIN - (H - MARGIN - py) * SCALE
+
+
 tools: list[str] = []
 chain: list[tuple[str, str | None]] = []  # (outil, expression de visibilité)
 pos = [0]
@@ -65,6 +87,7 @@ def rect(name: str, cx: float, cy: float, w: float, h: float, color, alpha: floa
          color_expr: tuple[str, str, str] | None = None, radius: float = 0.0) -> None:
     """Rectangle coloré = Background masqué par un RectangleMask."""
     mask = f"{name}Mask"
+    cx, cy, w, h = X(cx), Y(cy), w * SCALE, h * SCALE
     center = (f'Input {{ Value = {{ {nx(cx)}, {ny(cy)} }}, Expression = "{center_expr}", }}'
               if center_expr else f"Input {{ Value = {{ {nx(cx)}, {ny(cy)} }}, }}")
     width = num(width_expr) if width_expr else num(wrel(w))
@@ -108,6 +131,7 @@ def rect(name: str, cx: float, cy: float, w: float, h: float, color, alpha: floa
 def text(name: str, cx: float, cy: float, size_px: float, value: str, color, font=FONT_TXT,
          show: str | None = None, expr: str | None = None, size_expr: str | None = None,
          color_expr: tuple[str, str, str] | None = None, spacing: float = 1.0) -> None:
+    cx, cy, size_px = X(cx), Y(cy), size_px * SCALE
     styled = (f'Input {{ Value = "{value}", Expression = "{expr}", }}' if expr
               else f'Input {{ Value = "{value}", }}')
     size = num(size_expr) if size_expr else num(hrel(size_px))
@@ -207,8 +231,8 @@ def corners() -> None:
     """Coins de cadrage façon caméra."""
     m, ln, th = 30, 60, 3
     for i, (x, y, sx, sy) in enumerate([(m, m, 1, 1), (W - m, m, -1, 1), (m, H - m, 1, -1), (W - m, H - m, -1, -1)]):
-        rect(f"CornerH{i}", x + sx * ln / 2, y + sy * th / 2, ln, th, BONE, 0.75, show=f"{C}.ShowRec")
-        rect(f"CornerV{i}", x + sx * th / 2, y + sy * ln / 2, th, ln, BONE, 0.75, show=f"{C}.ShowRec")
+        rect(f"CornerH{i}", x + sx * ln / 2, y + sy * th / 2, ln, th, BONE, 0.4, show=f"{C}.ShowRec")
+        rect(f"CornerV{i}", x + sx * th / 2, y + sy * ln / 2, th, ln, BONE, 0.4, show=f"{C}.ShowRec")
 
 
 def build() -> str:
@@ -258,7 +282,7 @@ def build() -> str:
          expr=f"Text('REC  ' .. string.format('%02d:%02d:%02d', floor({secs}/3600), floor({secs}/60)%60, {secs}%60))")
 
     # Lieu
-    rect("LieuPlate", 330, 175, 540, 104, DARK, 0.6, show=show("ShowLieu"))
+    rect("LieuPlate", 330, 175, 540, 104, DARK, 0.42, show=show("ShowLieu"))
     rect("LieuBar", 62, 175, 5, 104, ORANGE, show=show("ShowLieu"))
     text("TxtLieu", 330, 160, 38, "SANATORIUM ABANDONNÉ", BONE, show=show("ShowLieu"))
     text("TxtSousLieu", 330, 205, 22, "AILE NORD - SOUS-SOL", ORANGE, FONT_NUM, show=show("ShowLieu"))
@@ -271,7 +295,7 @@ def build() -> str:
 
     # PEUR
     danger = f"{C}.Peur >= 70"
-    rect("PeurPlate", 330, 825, 540, 112, DARK, 0.6, show=show("ShowPeur"))
+    rect("PeurPlate", 330, 825, 540, 112, DARK, 0.42, show=show("ShowPeur"))
     rect("PeurBar", 62, 825, 5, 112, ORANGE, show=show("ShowPeur"),
          color_expr=(f"iif({danger}, {RED[0]}, {ORANGE[0]})", f"iif({danger}, {RED[1]}, {ORANGE[1]})", f"iif({danger}, {RED[2]}, {ORANGE[2]})"))
     text("TxtPeur", 150, 800, 28, "PEUR", BONE, show=show("ShowPeur"), spacing=1.15)
@@ -280,18 +304,18 @@ def build() -> str:
          color_expr=(f"iif({danger}, {RED[0]}, {BONE[0]})", f"iif({danger}, {RED[1]}, {BONE[1]})", f"iif({danger}, {RED[2]}, {BONE[2]})"))
     rect("PeurTrack", 330, 852, 490, 20, BONE, 0.15, show=show("ShowPeur"))
     rect("PeurFill", 330, 852, 490, 20, ORANGE, show=show("ShowPeur"),
-         width_expr=f"{wrel(490)}*{C}.Peur/100",
-         center_expr=f"Point({nx(85)} + {wrel(490)}*{C}.Peur/200, {ny(852)})",
+         width_expr=f"{wrel(490 * SCALE)}*{C}.Peur/100",
+         center_expr=f"Point({nx(X(85))} + {wrel(490 * SCALE)}*{C}.Peur/200, {ny(Y(852))})",
          color_expr=(f"iif({danger}, {RED[0]}, {ORANGE[0]})", f"iif({danger}, {RED[1]}, {ORANGE[1]})", f"iif({danger}, {RED[2]}, {ORANGE[2]})"))
     segments("Peur", 85, 490, 852, 20, 20, show("ShowPeur"))
 
     # STRESS (cœur qui bat au rythme des BPM)
     high = f"{C}.Stress >= 120"
-    rect("StressPlate", 330, 960, 540, 112, DARK, 0.6, show=show("ShowStress"))
+    rect("StressPlate", 330, 960, 540, 112, DARK, 0.42, show=show("ShowStress"))
     rect("StressBar", 62, 960, 5, 112, ORANGE, show=show("ShowStress"),
          color_expr=(f"iif({high}, {RED[0]}, {ORANGE[0]})", f"iif({high}, {RED[1]}, {ORANGE[1]})", f"iif({high}, {RED[2]}, {ORANGE[2]})"))
     text("Coeur", 100, 935, 30, "♥", RED, FONT_SYM, show=show("ShowStress"),
-         size_expr=f"{hrel(34)}*(1 + 0.25*max(0, sin(time/{C}.IPS*{C}.Stress/60*6.28318))^8)",
+         size_expr=f"{hrel(34 * SCALE)}*(1 + 0.25*max(0, sin(time/{C}.IPS*{C}.Stress/60*6.28318))^8)",
          color_expr=(f"iif({high}, {RED[0]}, {ORANGE[0]})", f"iif({high}, {RED[1]}, {ORANGE[1]})", f"iif({high}, {RED[2]}, {ORANGE[2]})"))
     text("TxtStress", 200, 935, 28, "STRESS", BONE, show=show("ShowStress"), spacing=1.15)
     text("TxtStressVal", 490, 935, 34, "80 BPM", BONE, FONT_NUM, show=show("ShowStress"),
@@ -300,8 +324,8 @@ def build() -> str:
     level = f"min(1, max(0, ({C}.Stress-60)/130))"
     rect("StressTrack", 330, 987, 490, 20, BONE, 0.15, show=show("ShowStress"))
     rect("StressFill", 330, 987, 490, 20, ORANGE, show=show("ShowStress"),
-         width_expr=f"{wrel(490)}*{level}",
-         center_expr=f"Point({nx(85)} + {wrel(490)}*{level}/2, {ny(987)})",
+         width_expr=f"{wrel(490 * SCALE)}*{level}",
+         center_expr=f"Point({nx(X(85))} + {wrel(490 * SCALE)}*{level}/2, {ny(Y(987))})",
          color_expr=(f"iif({high}, {RED[0]}, {ORANGE[0]})", f"iif({high}, {RED[1]}, {ORANGE[1]})", f"iif({high}, {RED[2]}, {ORANGE[2]})"))
     segments("Stress", 85, 490, 987, 20, 20, show("ShowStress"))
 
@@ -309,14 +333,14 @@ def build() -> str:
     low = f"{C}.Batterie < 20"
     mid = f"{C}.Batterie < 45"
     blink = f"{C}.ShowBatterie*iif({low}, iif(time % 20 < 10, 1, 0.35), 1)"
-    rect("BattPlate", 1700, 975, 360, 92, DARK, 0.6, show=show("ShowBatterie"))
+    rect("BattPlate", 1700, 975, 360, 92, DARK, 0.42, show=show("ShowBatterie"))
     text("TxtLampe", 1568, 975, 22, "LAMPE", DIM, FONT_NUM, show=blink)
     rect("BattOuter", 1665, 975, 132, 52, BONE, show=blink)
     rect("BattInner", 1665, 975, 122, 42, DARK, show=blink)
     rect("BattTip", 1736, 975, 8, 20, BONE, show=blink)
     rect("BattFill", 1665, 975, 114, 34, (0.6, 0.89, 0.43), show=blink,
-         width_expr=f"{wrel(114)}*{C}.Batterie/100",
-         center_expr=f"Point({nx(1608)} + {wrel(114)}*{C}.Batterie/200, {ny(975)})",
+         width_expr=f"{wrel(114 * SCALE)}*{C}.Batterie/100",
+         center_expr=f"Point({nx(X(1608))} + {wrel(114 * SCALE)}*{C}.Batterie/200, {ny(Y(975))})",
          color_expr=(f"iif({low}, {RED[0]}, iif({mid}, 1.0, 0.6))", f"iif({low}, {RED[1]}, iif({mid}, 0.69, 0.89))", f"iif({low}, {RED[2]}, iif({mid}, 0.1, 0.43))"))
     text("TxtBatt", 1820, 975, 34, "70%", BONE, FONT_NUM, show=blink,
          expr=f"Text(floor({C}.Batterie) .. '%')",

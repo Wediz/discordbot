@@ -14,7 +14,7 @@ const SIZE = {width: 1080, height: 1920, fps: FPS};
 
 export const RemotionRoot: React.FC = () => (
 	<>
-		<Composition id="IntroUrbexFrance" component={IntroUrbex} durationInFrames={INTRO_DURATION} {...SIZE} />
+		<Composition id="IntroUrbexFrance" component={IntroUrbex} durationInFrames={INTRO_DURATION} width={1920} height={1080} fps={FPS} />
 		<Composition id="SpeedAssault2" component={SpeedAssault2} durationInFrames={TOTAL_FRAMES} {...SIZE} />
 		<Folder name="Sequences">
 			<Composition id="S1-Intro" component={Intro} durationInFrames={segment('intro').duration} {...SIZE} />

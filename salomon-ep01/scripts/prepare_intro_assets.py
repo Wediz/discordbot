@@ -2,8 +2,7 @@
 
     python3 scripts/prepare_intro_assets.py
 
-- Images d'ambiance : reprises de pub-urbex/work/img (déjà dans le dépôt),
-  converties en JPEG, sans le numéro incrusté en haut à gauche.
+- Fond « lieu abandonné » : voir scripts/make_wall.py (généré, aucune photo).
 - Logo officiel (badge rond) : déposer le fichier fourni dans
   public/assets/brand/source/logo-urbex-fr.png. Le fond blanc autour du
   cercle est retiré (masque circulaire), le badge lui-même n'est pas modifié.
@@ -14,20 +13,7 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFilter
 
 ROOT = Path(__file__).resolve().parent.parent
-SRC_IMG = ROOT.parent / "pub-urbex" / "work" / "img"
-OUT = ROOT / "public" / "assets" / "urbex"
 BRAND = ROOT / "public" / "assets" / "brand"
-
-
-def images() -> None:
-    OUT.mkdir(parents=True, exist_ok=True)
-    for f in sorted(SRC_IMG.glob("*.png")):
-        im = Image.open(f).convert("RGB")
-        # Retire la bande du numéro incrusté (coin haut gauche) en recadrant 4 %.
-        w, h = im.size
-        im = im.crop((int(w * 0.05), int(h * 0.05), w, h))
-        im.save(OUT / f"{f.stem}.jpg", quality=90, optimize=True)
-        print(f"urbex/{f.stem}.jpg", im.size)
 
 
 def logo() -> None:
@@ -56,5 +42,4 @@ def logo() -> None:
 
 
 if __name__ == "__main__":
-    images()
     logo()

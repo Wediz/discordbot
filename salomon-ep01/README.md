@@ -106,7 +106,7 @@ Aucune vidéo, musique ou image externe, aucune API payante.
 
 ---
 
-# Intro Urbex-France.com (22 s, 9:16)
+# Intro Urbex-France.com (22 s, YouTube 16:9 — 1920×1080)
 
 Composition **IntroUrbexFrance** (même projet). Vidéo : `out/intro-urbex-france.mp4`.
 
@@ -124,4 +124,6 @@ Composition **IntroUrbexFrance** (même projet). Vidéo : `out/intro-urbex-franc
 - **Son** (musique + bruitages synthétisés) : `npm run audio:intro` → `public/audio/intro-urbex.wav`.
   Si tu changes le nombre de risques ou de règles, mets les mêmes nombres en haut de `scripts/intro_audio.py`.
 - **Export** : `npm run render:intro`.
-- Images d'ambiance : tes visuels de `pub-urbex/work/img/`, recadrés sans leur numéro.
+- **Fond** : un seul décor « lieu abandonné » (mur de béton sali, fissures, coulures), généré par
+  `python3 scripts/make_wall.py` → `public/assets/urbex/wall.jpg`. Aucune photo externe.
+  Le mur est éclairé par une lampe torche animée, avec de la poussière en suspension.

@@ -7,7 +7,7 @@ import {Grain, Vignette} from '../components/Grain';
 import {LightFlash} from '../components/Light';
 import {DrawLine, RiseText} from '../components/Reveal';
 import {COLORS, FONTS} from '../theme';
-import {BEAT, BRAND, DANGERS, LOGO, RULES, RULES_TITLE, T, WARNING} from './content';
+import {BEAT, BRAND, DANGERS, LOGO, RULES, RULES_TITLE, T, WALL, WARNING} from './content';
 
 /* ───────────────────────── éléments communs ───────────────────────── */
 
@@ -38,46 +38,87 @@ const HazardTape: React.FC<{top: number; angle?: number; speed?: number; opacity
 	);
 };
 
-/** Photo plein cadre, étalonnée sombre, avec lent mouvement de caméra. */
-const Plate: React.FC<{src: string; duration: number; tint?: 'warm' | 'cold'; dir?: 1 | -1}> = ({
-	src,
-	duration,
-	tint = 'warm',
-	dir = 1,
-}) => {
+/**
+ * Fond « lieu abandonné » : mur de béton généré (scripts/make_wall.py),
+ * plongé dans le noir et éclairé par une lampe, avec de la poussière en suspension.
+ */
+const Wall: React.FC<{
+	duration: number;
+	light?: {x: number; y: number; r: number};
+	dir?: 1 | -1;
+	seed?: string;
+	power?: number;
+}> = ({duration, light = {x: 960, y: 540, r: 620}, dir = 1, seed = 'w', power = 1}) => {
 	const frame = useCurrentFrame();
-	const grade =
-		tint === 'warm'
-			? 'grayscale(0.5) brightness(0.7) contrast(1.2) sepia(0.25)'
-			: 'grayscale(0.85) brightness(0.62) contrast(1.25)';
+	const pan = tween(frame, [0, duration], [dir * 60, -dir * 60], EASE.soft);
+	const dust = Array.from({length: 46}, (_, i) => {
+		const x0 = random(`${seed}-x${i}`) * 1920;
+		const y0 = random(`${seed}-y${i}`) * 1080;
+		const size = 1.5 + random(`${seed}-s${i}`) * 3.5;
+		const speed = 0.2 + random(`${seed}-v${i}`) * 0.8;
+		return {
+			x: (x0 + frame * speed * 1.6) % 1920,
+			y: (y0 - frame * speed + 1080) % 1080,
+			size,
+			opacity: 0.25 + 0.6 * random(`${seed}-o${i}`),
+		};
+	});
 	return (
-		<AbsoluteFill style={{overflow: 'hidden'}}>
+		<AbsoluteFill style={{overflow: 'hidden', background: COLORS.black}}>
 			<Img
-				src={staticFile(src)}
+				src={staticFile(WALL)}
 				style={{
 					position: 'absolute',
-					inset: 0,
-					width: '100%',
-					height: '100%',
-					objectFit: 'cover',
-					scale: `${tween(frame, [0, duration], [1.18, 1.05], EASE.soft)}`,
-					translate: `${tween(frame, [0, duration], [dir * 40, -dir * 40], EASE.soft)}px 0px`,
-					filter: `${grade} brightness(${tween(frame, [0, 5], [2.2, 1])})`,
+					left: -240 + pan,
+					top: -135,
+					width: 2400,
+					height: 1350,
+					scale: `${tween(frame, [0, duration], [1.06, 1], EASE.soft)}`,
+					filter: `brightness(${0.75 * power}) contrast(1.15)`,
 				}}
 			/>
+			{/* Lumière chaude de la lampe sur le mur */}
 			<AbsoluteFill
-				style={{background: `linear-gradient(180deg, rgba(7,7,8,0.65) 0%, transparent 30%, transparent 50%, rgba(7,7,8,0.92) 82%)`}}
+				style={{
+					mixBlendMode: 'soft-light',
+					background: `radial-gradient(circle ${light.r}px at ${light.x}px ${light.y}px, rgba(255,214,170,0.9), transparent 75%)`,
+				}}
 			/>
+			{/* Obscurité autour du faisceau */}
+			<AbsoluteFill
+				style={{
+					background: `radial-gradient(circle ${light.r * 1.5}px at ${light.x}px ${light.y}px, rgba(7,7,8,0.05) 0%, rgba(7,7,8,0.55) 45%, rgba(7,7,8,0.94) 100%)`,
+				}}
+			/>
+			{/* Poussière dans la lumière */}
+			{dust.map((d, i) => (
+				<div
+					key={i}
+					style={{
+						position: 'absolute',
+						left: d.x,
+						top: d.y,
+						width: d.size,
+						height: d.size,
+						borderRadius: d.size,
+						background: 'rgba(255,236,214,1)',
+						filter: d.size > 3.5 ? 'blur(1.5px)' : undefined,
+						opacity:
+							d.opacity *
+							Math.max(0, 1 - Math.hypot(d.x - light.x, d.y - light.y) / (light.r * 1.1)),
+					}}
+				/>
+			))}
 		</AbsoluteFill>
 	);
 };
 
 /** Deux lignes de texte massives qui claquent sur le temps. */
-const Slam: React.FC<{words: string[]; accent?: number; top?: number; size?: number}> = ({words, accent = 1, top = 1180, size: maxSize = 168}) => {
+const Slam: React.FC<{words: string[]; accent?: number; top?: number; size?: number}> = ({words, accent = 1, top = 560, size: maxSize = 200}) => {
 	const frame = useCurrentFrame();
-	// Taille ajustée pour que le mot le plus long tienne dans 900 px (Anton ≈ 0,46 em par lettre).
+	// Taille ajustée pour que le mot le plus long tienne dans 1500 px (Anton ≈ 0,46 em par lettre).
 	const longest = Math.max(...words.map((w) => w.length));
-	const size = Math.min(maxSize, Math.floor(900 / (longest * 0.46)));
+	const size = Math.min(maxSize, Math.floor(1500 / (longest * 0.46)));
 	return (
 		<AbsoluteFill style={{top, alignItems: 'center'}}>
 			{words.map((w, i) => (
@@ -135,34 +176,35 @@ const Warning: React.FC = () => {
 	return (
 		<AbsoluteFill style={{background: COLORS.black}}>
 			<AbsoluteFill style={{opacity: flicker}}>
-				<AbsoluteFill style={{background: `radial-gradient(ellipse 70% 40% at 50% 48%, rgba(255,91,26,0.18), transparent 70%)`}} />
-				<HazardTape top={tween(frame, [0, 20], [-120, 300], EASE.out)} angle={-6} />
-				<HazardTape top={tween(frame, [0, 20], [1960, 1520], EASE.out)} angle={-6} speed={-6} />
+				<Wall duration={6 * BEAT} light={{x: 960, y: 560, r: 760}} seed="warn" power={0.8} />
+				<AbsoluteFill style={{background: `radial-gradient(ellipse 60% 45% at 50% 52%, rgba(255,91,26,0.16), transparent 70%)`}} />
+				<HazardTape top={tween(frame, [0, 20], [-140, 20], EASE.out)} angle={-3} />
+				<HazardTape top={tween(frame, [0, 20], [1160, 990], EASE.out)} angle={-3} speed={-6} />
 			</AbsoluteFill>
 			<Glitch intensity={glitch} seed="warn">
 				<AbsoluteFill style={{opacity: flicker}}>
 					{/* Panneau triangle */}
-					<AbsoluteFill style={{top: 520, alignItems: 'center'}}>
-						<svg width={150} height={135} viewBox="0 0 100 90" style={{opacity: tween(frame, [4, 10], [0, 1]), scale: `${tween(frame, [4, 14], [1.4, 1], EASE.out)}`}}>
+					<AbsoluteFill style={{top: 130, alignItems: 'center'}}>
+						<svg width={120} height={108} viewBox="0 0 100 90" style={{opacity: tween(frame, [4, 10], [0, 1]), scale: `${tween(frame, [4, 14], [1.4, 1], EASE.out)}`}}>
 							<path d="M50 4 L96 86 L4 86 Z" fill="none" stroke={COLORS.orange} strokeWidth={7} strokeLinejoin="round" />
 							<rect x={46} y={30} width={8} height={32} fill={COLORS.orange} />
 							<rect x={46} y={68} width={8} height={8} fill={COLORS.orange} />
 						</svg>
 					</AbsoluteFill>
-					<Kicker top={700} delay={10}>
+					<Kicker top={262} delay={10}>
 						{WARNING.kicker}
 					</Kicker>
-					<AbsoluteFill style={{top: 790, alignItems: 'center'}}>
+					<AbsoluteFill style={{top: 330, alignItems: 'center'}}>
 						<RiseText delay={30} style={{fontFamily: FONTS.condensed, fontWeight: 700, fontSize: 64, letterSpacing: '0.2em', marginRight: '-0.2em', color: COLORS.bone}}>
 							{WARNING.lines[0]}
 						</RiseText>
-						<RiseText delay={36} duration={14} style={{fontFamily: FONTS.display, fontSize: 210, lineHeight: 1, color: COLORS.bone, marginTop: 10}}>
+						<RiseText delay={36} duration={14} style={{fontFamily: FONTS.display, fontSize: 200, lineHeight: 1, color: COLORS.bone, marginTop: 6}}>
 							{WARNING.lines[1]}
 						</RiseText>
 						<div
 							style={{
 								fontFamily: FONTS.display,
-								fontSize: 210,
+								fontSize: 200,
 								lineHeight: 1,
 								color: COLORS.orange,
 								scale: `${tween(frame, [54, 62], [1.5, 1], EASE.out)}`,
@@ -186,26 +228,32 @@ const Warning: React.FC = () => {
 
 const Beat2: React.FC<{
 	words: string[];
-	image: string;
 	index: number;
 	total: number;
 	label: string;
 	tint: 'warm' | 'cold';
 	title?: string;
-}> = ({words, image, index, total, label, tint, title}) => {
+}> = ({words, index, total, label, tint, title}) => {
 	const frame = useCurrentFrame();
 	const d = 2 * BEAT;
 	const shake = frame < 6 ? (random(`sh-${index}-${frame}`) - 0.5) * 18 : 0;
 	return (
 		<AbsoluteFill style={{background: COLORS.black, translate: `${shake}px ${shake * 0.6}px`}}>
-			<Plate src={image} duration={d} tint={tint} dir={index % 2 ? 1 : -1} />
-			{tint === 'warm' ? <HazardTape top={210} angle={-3} opacity={0.9} height={28} speed={8} /> : null}
+			<Wall
+				duration={d}
+				dir={index % 2 ? 1 : -1}
+				seed={`${label}${index}`}
+				light={{x: 960 + (index % 2 ? 260 : -260) * (tint === 'warm' ? 1 : 0.4), y: 620, r: 680}}
+				power={tint === 'warm' ? 1 : 0.8}
+			/>
+			{tint === 'cold' ? <AbsoluteFill style={{background: 'rgba(40,60,80,0.18)', mixBlendMode: 'color'}} /> : null}
+			{tint === 'warm' ? <HazardTape top={110} angle={-2} opacity={0.9} height={26} speed={8} /> : null}
 			{title ? (
-				<Kicker top={300} color={COLORS.bone}>
+				<Kicker top={150} color={COLORS.bone}>
 					{title}
 				</Kicker>
 			) : null}
-			<Kicker top={1100} delay={2}>
+			<Kicker top={490} delay={2}>
 				{label} {String(index + 1).padStart(2, '0')} / {String(total).padStart(2, '0')}
 			</Kicker>
 			<Slam words={words} accent={tint === 'warm' ? 1 : 1} />
@@ -215,18 +263,18 @@ const Beat2: React.FC<{
 
 /* ───────────────────────── 4. Lampe torche + logo ───────────────────────── */
 
-const LOGO_SIZE = 720;
+const LOGO_SIZE = 640;
 
 const LogoReveal: React.FC = () => {
 	const frame = useCurrentFrame(); // 0 = début du noir
 	const on = 2 * BEAT; // la lumière s'allume franchement
 	// Faisceau de lampe qui cherche dans le noir puis se pose sur le logo.
-	const bx = 540 + Math.sin(frame / 7) * tween(frame, [0, on], [380, 0], EASE.inOut);
-	const by = 900 + Math.cos(frame / 9) * tween(frame, [0, on], [420, 0], EASE.inOut);
+	const bx = 960 + Math.sin(frame / 7) * tween(frame, [0, on], [620, 0], EASE.inOut);
+	const by = 540 + Math.cos(frame / 9) * tween(frame, [0, on], [280, 0], EASE.inOut);
 	const radius = tween(frame, [0, on - 4], [150, 330], EASE.inOut);
 	const full = tween(frame, [on, on + 10], [0, 1], EASE.out);
-	const mask = `radial-gradient(circle ${radius + full * 900}px at ${bx}px ${by}px, black 55%, transparent 100%)`;
-	const logoTop = 900 - LOGO_SIZE / 2;
+	const mask = `radial-gradient(circle ${radius + full * 1300}px at ${bx}px ${by}px, black 55%, transparent 100%)`;
+	const logoTop = 540 - LOGO_SIZE / 2;
 	const shine = tween(frame, [on + 18, on + 46], [-40, 140], EASE.inOut);
 	const logoMask = `url(${staticFile(LOGO.src)})`;
 
@@ -234,8 +282,8 @@ const LogoReveal: React.FC = () => {
 		<AbsoluteFill style={{background: COLORS.black}}>
 			{/* Clic de la lampe : petite poussière dans le faisceau */}
 			<AbsoluteFill style={{maskImage: mask, WebkitMaskImage: mask}}>
-				<AbsoluteFill style={{background: `radial-gradient(circle at 50% 47%, #2A2522 0%, #121212 45%, ${COLORS.black} 80%)`}} />
-				<div style={{position: 'absolute', left: 540 - LOGO_SIZE / 2, top: logoTop, width: LOGO_SIZE, height: LOGO_SIZE, scale: `${tween(frame, [on, on + 24], [1.08, 1], EASE.out)}`}}>
+				<Wall duration={T.brand - T.blackout} light={{x: bx, y: by, r: radius * 2.2 + full * 500}} seed="logo" power={0.9} />
+				<div style={{position: 'absolute', left: 960 - LOGO_SIZE / 2, top: logoTop, width: LOGO_SIZE, height: LOGO_SIZE, scale: `${tween(frame, [on, on + 24], [1.08, 1], EASE.out)}`}}>
 					<Img src={staticFile(LOGO.src)} style={{width: LOGO_SIZE, height: LOGO_SIZE, filter: `drop-shadow(0 0 ${40 * full}px rgba(255,91,26,${0.35 * full}))`}} />
 					<div
 						style={{
@@ -270,27 +318,20 @@ const Brand: React.FC = () => {
 	const frame = useCurrentFrame();
 	const {fps} = useVideoConfig();
 	const end = T.end - T.brand;
-	const logoScale = tween(frame, [0, 16], [1, 0.62], EASE.inOut);
-	const logoY = tween(frame, [0, 16], [900, 660], EASE.inOut);
+	const logoScale = tween(frame, [0, 16], [1, 0.9], EASE.inOut);
+	const logoX = tween(frame, [0, 16], [960, 500], EASE.inOut);
 	const ctaAt = end - 3 * BEAT;
 
 	return (
 		<AbsoluteFill style={{background: COLORS.black}}>
-			{/* Défilé des lieux, en fond, sur le temps */}
-			{BRAND.montage.map((src, i) => (
-				<Sequence key={src} from={i * BEAT * 1.5} durationInFrames={BEAT * 1.5 + (i === BRAND.montage.length - 1 ? end : 0)} premountFor={fps}>
-					<AbsoluteFill style={{opacity: tween(frame, [0, 10], [0, 0.55])}}>
-						<Plate src={src} duration={BEAT * 2} tint="warm" dir={i % 2 ? 1 : -1} />
-					</AbsoluteFill>
-				</Sequence>
-			))}
-			<AbsoluteFill style={{background: `radial-gradient(ellipse 60% 35% at 50% 30%, rgba(7,7,8,0.75), transparent 80%)`}} />
+			<Wall duration={end} light={{x: 760, y: 540, r: 900}} seed="brand" dir={-1} />
+			<AbsoluteFill style={{background: 'linear-gradient(90deg, transparent 35%, rgba(7,7,8,0.55) 80%)'}} />
 
 			<div
 				style={{
 					position: 'absolute',
-					left: 540 - LOGO_SIZE / 2,
-					top: logoY - LOGO_SIZE / 2,
+					left: logoX - LOGO_SIZE / 2,
+					top: 540 - LOGO_SIZE / 2,
 					width: LOGO_SIZE,
 					height: LOGO_SIZE,
 					scale: `${logoScale}`,
@@ -300,12 +341,12 @@ const Brand: React.FC = () => {
 			</div>
 
 			{/* Adresse du site, en très gros */}
-			<AbsoluteFill style={{top: 940, alignItems: 'center'}}>
-				<RiseText delay={14} duration={16} style={{fontFamily: FONTS.display, fontSize: 132, lineHeight: 1.05, color: COLORS.bone, whiteSpace: 'nowrap'}}>
+			<AbsoluteFill style={{top: 300, left: 900, alignItems: 'flex-start'}}>
+				<RiseText delay={14} duration={16} style={{fontFamily: FONTS.display, fontSize: 124, lineHeight: 1.05, color: COLORS.bone, whiteSpace: 'nowrap'}}>
 					URBEX-FRANCE<span style={{color: COLORS.orange}}>.COM</span>
 				</RiseText>
-				<DrawLine from={24} width={860} color={COLORS.orange} align="center" thickness={4} style={{marginTop: 14}} />
-				<div style={{marginTop: 34, textAlign: 'center'}}>
+				<DrawLine from={24} width={900} color={COLORS.orange} align="left" thickness={4} style={{marginTop: 14}} />
+				<div style={{marginTop: 30, textAlign: 'left'}}>
 					{BRAND.tagline.map((line, i) => (
 						<RiseText
 							key={line}
@@ -319,8 +360,8 @@ const Brand: React.FC = () => {
 			</AbsoluteFill>
 
 			{/* Ce qu'on trouve sur le site */}
-			<AbsoluteFill style={{top: 1420, alignItems: 'center'}}>
-				<div style={{display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 18, width: 900}}>
+			<AbsoluteFill style={{top: 740, left: 900, alignItems: 'flex-start'}}>
+				<div style={{display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-start', gap: 16, width: 920}}>
 					{BRAND.features.map((f, i) => (
 						<div
 							key={f}
@@ -345,11 +386,11 @@ const Brand: React.FC = () => {
 			</AbsoluteFill>
 
 			{/* Appel à l'action final */}
-			<AbsoluteFill style={{top: 1440, alignItems: 'center'}}>
+			<AbsoluteFill style={{top: 750, left: 900, alignItems: 'flex-start'}}>
 				<div
 					style={{
 						fontFamily: FONTS.display,
-						fontSize: 96,
+						fontSize: 78,
 						color: COLORS.black,
 						background: COLORS.orange,
 						padding: '14px 44px 18px',
@@ -380,12 +421,12 @@ export const IntroUrbex: React.FC = () => {
 			</Sequence>
 			{DANGERS.map((d, i) => (
 				<Sequence key={d.words.join()} name={`2 Risque ${i + 1}`} from={T.dangers + i * 2 * BEAT} durationInFrames={2 * BEAT} premountFor={fps}>
-					<Beat2 words={d.words} image={d.image} index={i} total={DANGERS.length} label="RISQUE" tint="warm" />
+					<Beat2 words={d.words} index={i} total={DANGERS.length} label="RISQUE" tint="warm" />
 				</Sequence>
 			))}
 			{RULES.map((r, i) => (
 				<Sequence key={r.words.join()} name={`3 Règle ${i + 1}`} from={T.rules + i * 2 * BEAT} durationInFrames={2 * BEAT} premountFor={fps}>
-					<Beat2 words={r.words} image={r.image} index={i} total={RULES.length} label="RÈGLE" tint="cold" title={RULES_TITLE} />
+					<Beat2 words={r.words} index={i} total={RULES.length} label="RÈGLE" tint="cold" title={RULES_TITLE} />
 				</Sequence>
 			))}
 			<Sequence name="4 Lampe + logo" from={T.blackout} durationInFrames={T.brand - T.blackout} premountFor={fps}>

@@ -13,7 +13,9 @@
     "audio": "python3 scripts/build_audio.py",
     "render:intro": "remotion render IntroUrbexFrance out/brut-intro.mp4 && remotion ffmpeg -y -i out/brut-intro.mp4 -vf scale=out_range=tv:out_color_matrix=bt709,format=yuv420p -c:v libx264 -preset slow -crf 17 -color_range tv -colorspace bt709 -color_primaries bt709 -color_trc bt709 -af loudnorm=I=-14:TP=-1.5:LRA=11 -c:a aac -b:a 192k -ar 48000 -movflags +faststart out/intro-urbex-france.mp4",
     "audio:intro": "python3 scripts/intro_audio.py",
-    "assets:intro": "python3 scripts/prepare_intro_assets.py"
+    "assets:intro": "python3 scripts/prepare_intro_assets.py",
+    "render:outro": "remotion render OutroUrbexFrance out/brut-outro.mp4 && remotion ffmpeg -y -i out/brut-outro.mp4 -vf scale=out_range=tv:out_color_matrix=bt709,format=yuv420p -c:v libx264 -preset slow -crf 17 -color_range tv -colorspace bt709 -color_primaries bt709 -color_trc bt709 -af loudnorm=I=-14:TP=-1.5:LRA=11 -c:a aac -b:a 192k -ar 48000 -movflags +faststart out/outro-urbex-france.mp4",
+    "audio:outro": "python3 scripts/outro_audio.py"
   },
   "dependencies": {
     "@fontsource/anton": "^5.3.0",

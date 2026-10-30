@@ -12,7 +12,7 @@ import {BEAT, BRAND, DANGERS, LOGO, RULES, RULES_TITLE, T, WALL, WARNING} from '
 /* ───────────────────────── éléments communs ───────────────────────── */
 
 /** Ruban de signalisation orange/noir qui défile. */
-const HazardTape: React.FC<{top: number; angle?: number; speed?: number; opacity?: number; height?: number}> = ({
+export const HazardTape: React.FC<{top: number; angle?: number; speed?: number; opacity?: number; height?: number}> = ({
 	top,
 	angle = -4,
 	speed = 6,
@@ -42,7 +42,7 @@ const HazardTape: React.FC<{top: number; angle?: number; speed?: number; opacity
  * Fond « lieu abandonné » : mur de béton généré (scripts/make_wall.py),
  * plongé dans le noir et éclairé par une lampe, avec de la poussière en suspension.
  */
-const Wall: React.FC<{
+export const Wall: React.FC<{
 	duration: number;
 	light?: {x: number; y: number; r: number};
 	dir?: 1 | -1;

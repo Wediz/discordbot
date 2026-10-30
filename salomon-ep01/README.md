@@ -127,3 +127,20 @@ Composition **IntroUrbexFrance** (même projet). Vidéo : `out/intro-urbex-franc
 - **Fond** : un seul décor « lieu abandonné » (mur de béton sali, fissures, coulures), généré par
   `python3 scripts/make_wall.py` → `public/assets/urbex/wall.jpg`. Aucune photo externe.
   Le mur est éclairé par une lampe torche animée, avec de la poussière en suspension.
+
+---
+
+# Outro / écran de fin YouTube (15 s, 1920×1080)
+
+Composition **OutroUrbexFrance**. Vidéo : `out/outro-urbex-france.mp4`.
+
+- « MERCI D'AVOIR REGARDÉ », **ABONNE-TOI**, ton logo entouré d'un cercle orange qui tourne.
+- Un curseur clique sur **S'ABONNER**, qui devient **ABONNÉ ✓**, la cloche sonne, puis
+  « ACTIVE LA CLOCHE POUR NE RIEN RATER ».
+- À droite, deux cadres **VIDÉO SUIVANTE** / **À VOIR AUSSI**, et en bas URBEX-FRANCE.COM.
+
+**Dans YouTube Studio** (Éditer la vidéo → Écran de fin) : pose l'élément *S'abonner* sur le logo
+et deux éléments *Vidéo* sur les cadres de droite, sur les 15 dernières secondes.
+
+- **Textes** : en haut de `src/outro-urbex/OutroUrbex.tsx` (`OUTRO`).
+- **Son** : `npm run audio:outro` · **Export** : `npm run render:outro`.

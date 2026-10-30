@@ -8,6 +8,7 @@ import {Outro} from './scenes/Outro';
 import {ProductReveal} from './scenes/ProductReveal';
 import {SpeedAssault2} from './SpeedAssault2';
 import {INTRO_DURATION, IntroUrbex} from './intro-urbex/IntroUrbex';
+import {OUTRO_DURATION, OutroUrbex} from './outro-urbex/OutroUrbex';
 import './theme';
 
 const SIZE = {width: 1080, height: 1920, fps: FPS};
@@ -15,6 +16,7 @@ const SIZE = {width: 1080, height: 1920, fps: FPS};
 export const RemotionRoot: React.FC = () => (
 	<>
 		<Composition id="IntroUrbexFrance" component={IntroUrbex} durationInFrames={INTRO_DURATION} width={1920} height={1080} fps={FPS} />
+		<Composition id="OutroUrbexFrance" component={OutroUrbex} durationInFrames={OUTRO_DURATION} width={1920} height={1080} fps={FPS} />
 		<Composition id="SpeedAssault2" component={SpeedAssault2} durationInFrames={TOTAL_FRAMES} {...SIZE} />
 		<Folder name="Sequences">
 			<Composition id="S1-Intro" component={Intro} durationInFrames={segment('intro').duration} {...SIZE} />

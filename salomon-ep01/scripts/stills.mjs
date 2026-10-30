@@ -14,7 +14,8 @@ const list = frames.length
 
 const browserExecutable = process.env.REMOTION_BROWSER ?? null;
 const serveUrl = await bundle({entryPoint: path.resolve('src/index.ts')});
-const composition = await selectComposition({serveUrl, id: 'SpeedAssault2', browserExecutable});
+const id = process.env.COMP ?? 'SpeedAssault2';
+const composition = await selectComposition({serveUrl, id, browserExecutable});
 for (const [name, frame] of list) {
 	const output = path.resolve('stills', `${name}.jpg`);
 	await renderStill({composition, serveUrl, frame, output, imageFormat: 'jpeg', jpegQuality: 88, browserExecutable});

@@ -103,3 +103,25 @@ Uniquement les fichiers fournis, rangés dans `public/assets/source/`.
 - `ambience-blur.jpg` : la même scène floutée, pour les fonds.
 
 Aucune vidéo, musique ou image externe, aucune API payante.
+
+---
+
+# Intro Urbex-France.com (22 s, 9:16)
+
+Composition **IntroUrbexFrance** (même projet). Vidéo : `out/intro-urbex-france.mp4`.
+
+| Temps | Contenu |
+|---|---|
+| 0 → 3,6 s | Avertissement : lumière qui grésille, ruban de signalisation, « L'URBEX EST UNE PRATIQUE DANGEREUSE » |
+| 3,6 → 8,4 s | 4 risques en coupes rapides : bâtiments instables, sols qui cèdent, propriétés privées, obscurité |
+| 8,4 → 12 s | Le code de l'explorateur : jamais seul, jamais d'effraction, ne prends que des photos |
+| 12 → 15,6 s | Noir total, une lampe torche cherche… et révèle le logo |
+| 15,6 → 21,6 s | URBEX-FRANCE.COM, la communauté, ce qu'on trouve sur le site, « REJOINS LA COMMUNAUTÉ » |
+
+- **Textes, images, rythme** : `src/intro-urbex/content.ts`.
+- **Logo officiel** : déposer le fichier dans `public/assets/brand/source/logo-urbex-fr.png`, puis
+  `npm run assets:intro` (retire le fond blanc autour du badge rond).
+- **Son** (musique + bruitages synthétisés) : `npm run audio:intro` → `public/audio/intro-urbex.wav`.
+  Si tu changes le nombre de risques ou de règles, mets les mêmes nombres en haut de `scripts/intro_audio.py`.
+- **Export** : `npm run render:intro`.
+- Images d'ambiance : tes visuels de `pub-urbex/work/img/`, recadrés sans leur numéro.

@@ -3,6 +3,9 @@
     python3 scripts/make_ragnar_assets.py
 → public/assets/ragnar/smoke.jpg   texture de fumée (niveaux de gris, mode « screen »)
 → src/alpha-ragnar/cracks.json     fissures de lave qui partent du centre de l'emblème
+→ public/assets/ragnar/personnage.jpg + personnage-matte.png
+   photo fournie (public/assets/ragnar/source/personnage.*) et sa silhouette pleine,
+   qui masque le décor derrière lui (la photo n'est pas modifiée).
 """
 import json
 import math
@@ -58,6 +61,40 @@ def cracks(cx=960, cy=400) -> None:
     print(len(paths), "fissures")
 
 
+def character() -> None:
+    srcs = sorted((ROOT / "public" / "assets" / "ragnar" / "source").glob("personnage.*"))
+    if not srcs:
+        print("Pas de photo de personnage (optionnel)")
+        return
+    im = Image.open(srcs[0]).convert("RGB").resize((1920, 1080), Image.LANCZOS)
+    im.save(ROOT / "public" / "assets" / "ragnar" / "personnage.jpg", quality=92)
+    lum = np.asarray(im).astype(np.int16).max(axis=2)
+    mask = Image.fromarray(((lum > 4) * 255).astype(np.uint8))
+    # Fermeture morphologique : bouche les zones très sombres de la veste
+    mask = mask.filter(ImageFilter.MaxFilter(31)).filter(ImageFilter.MaxFilter(31))
+    mask = mask.filter(ImageFilter.MinFilter(31)).filter(ImageFilter.MinFilter(25))
+    # Remplit les trous : tout ce qui n'est pas relié au bord devient silhouette
+    arr = np.asarray(mask) > 127
+    h, w = arr.shape
+    outside = np.zeros_like(arr)
+    stack = [(0, x) for x in range(w)] + [(h - 1, x) for x in range(w)] + [(y, 0) for y in range(h)] + [(y, w - 1) for y in range(h)]
+    while stack:
+        y, x = stack.pop()
+        if outside[y, x] or arr[y, x]:
+            continue
+        outside[y, x] = True
+        if y > 0: stack.append((y - 1, x))
+        if y < h - 1: stack.append((y + 1, x))
+        if x > 0: stack.append((y, x - 1))
+        if x < w - 1: stack.append((y, x + 1))
+    matte = Image.fromarray(((~outside) * 255).astype(np.uint8)).filter(ImageFilter.GaussianBlur(8))
+    black = Image.new("RGBA", (1920, 1080), (0, 0, 0, 255))
+    black.putalpha(matte)
+    black.save(ROOT / "public" / "assets" / "ragnar" / "personnage-matte.png", optimize=True)
+    print("personnage.jpg + personnage-matte.png")
+
+
 if __name__ == "__main__":
     smoke()
     cracks()
+    character()

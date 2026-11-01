@@ -6,7 +6,7 @@ import {EASE, pulse, tween} from '../anim';
 import {Glitch} from '../components/Glitch';
 import {Grain} from '../components/Grain';
 import cracksData from './cracks.json';
-import {BEAT, COLORS, DURATION, EMBLEM_RUNE, LOGO, RUNES, SUBTITLE, T, TITLE, WORDS} from './content';
+import {BEAT, CHARACTER, COLORS, DURATION, EMBLEM_RUNE, LOGO, RUNES, SUBTITLE, T, TITLE, WORDS} from './content';
 
 loadFont({family: 'Cinzel', url: staticFile('fonts/cinzel-latin-900-normal.woff2'), weight: '900'});
 loadFont({family: 'Cinzel', url: staticFile('fonts/cinzel-latin-600-normal.woff2'), weight: '600'});
@@ -14,7 +14,7 @@ loadFont({family: 'Runic', url: staticFile('fonts/noto-sans-runic-runic-400-norm
 
 const CX = 960; // centre de l'emblème
 const CY = 400;
-const TITLE_Y = 790;
+const TITLE_Y = CHARACTER ? 860 : 790;
 
 type Crack = {d: number; pts: [number, number, number][]};
 const CRACKS = cracksData as unknown as Crack[];
@@ -188,9 +188,9 @@ const RuneRing: React.FC<{frame: number}> = ({frame}) => {
 };
 
 const Emblem: React.FC<{frame: number}> = ({frame}) => {
-	const smoulder = tween(frame, [16, 60], [0, 0.35]);
+	const smoulder = tween(frame, [16, 60], [0, CHARACTER ? 0.55 : 0.35]);
 	const lit = tween(frame, [T.strike - 1, T.strike + 3], [0, 1]);
-	const opacity = Math.max(smoulder, lit);
+	const opacity = CHARACTER ? smoulder * (1 - tween(frame, [T.strike - 1, T.strike + 2], [0, 1])) : Math.max(smoulder, lit);
 	if (opacity <= 0) return null;
 	const sheen = tween(frame, [T.sheen - 20, T.sheen + 20], [-30, 130], EASE.inOut);
 	const scale = tween(frame, [T.strike, T.strike + 14], [1.25, 1], EASE.out) * (1 + 0.04 * pulse(frame, T.final, T.final + 3, T.final + 22));
@@ -219,6 +219,54 @@ const Emblem: React.FC<{frame: number}> = ({frame}) => {
 				{EMBLEM_RUNE}
 			</span>
 		</div>
+	);
+};
+
+/* ───────────── Personnage + lampe frontale ───────────── */
+
+const Character: React.FC<{frame: number}> = ({frame}) => {
+	if (!CHARACTER) return null;
+	const lit = tween(frame, [T.strike - 1, T.strike + 2], [0, 1]);
+	// Apparitions furtives dans le noir, sur les mots
+	const glimpse = T.words.some((w) => frame - w >= 1 && frame - w < 3) ? 0.3 : 0;
+	const vis = Math.max(lit, glimpse);
+	if (vis <= 0) return null;
+	const bright =
+		1 + 2.2 * pulse(frame, T.strike - 1, T.strike, T.strike + 14) + 0.5 * pulse(frame, T.echo, T.echo + 1, T.echo + 8) + 1.0 * pulse(frame, T.final - 1, T.final, T.final + 16);
+	const s = CHARACTER.scale * tween(frame, [T.strike, T.strike + 40], [1.05, 1], EASE.out);
+	const box: React.CSSProperties = {
+		position: 'absolute',
+		left: CX - CHARACTER.head.x * s,
+		top: CY - CHARACTER.head.y * s,
+		width: 1920 * s,
+		height: 1080 * s,
+		maskImage: 'linear-gradient(180deg, black 68%, transparent 84%)',
+		WebkitMaskImage: 'linear-gradient(180deg, black 68%, transparent 84%)',
+	};
+	return (
+		<>
+			<Img src={staticFile(CHARACTER.matte)} style={{...box, opacity: vis}} />
+			<Img
+				src={staticFile(CHARACTER.src)}
+				style={{...box, opacity: vis, mixBlendMode: 'screen', filter: `brightness(${bright}) contrast(1.06) saturate(0.92)`}}
+			/>
+		</>
+	);
+};
+
+const Headlamp: React.FC<{frame: number}> = ({frame}) => {
+	if (!CHARACTER) return null;
+	const on = tween(frame, [T.strike, T.strike + 6], [0, 1]);
+	if (on <= 0) return null;
+	const breath = 0.85 + 0.15 * Math.sin(frame / 7) + 0.6 * pulse(frame, T.final - 1, T.final + 1, T.final + 20);
+	const x = CX - 2;
+	const y = CY + 6;
+	return (
+		<AbsoluteFill style={{mixBlendMode: 'screen', pointerEvents: 'none', opacity: on}}>
+			<div style={{position: 'absolute', left: x - 170, top: y - 170, width: 340, height: 340, borderRadius: '50%', background: `radial-gradient(circle, rgba(225,242,255,${0.55 * breath}) 0%, rgba(140,200,255,${0.18 * breath}) 35%, transparent 70%)`}} />
+			<div style={{position: 'absolute', left: x - 9, top: y - 9, width: 18, height: 18, borderRadius: 9, background: '#FFFFFF', boxShadow: `0 0 20px 8px rgba(235,248,255,${0.9 * breath})`}} />
+			<div style={{position: 'absolute', left: x - 420, top: y - 1.5, width: 840, height: 3, background: 'linear-gradient(90deg, transparent, rgba(150,205,255,0.8), #FFFFFF 50%, rgba(150,205,255,0.8), transparent)', opacity: 0.55 * breath}} />
+		</AbsoluteFill>
 	);
 };
 
@@ -578,7 +626,9 @@ export const AlphaRagnar: React.FC = () => {
 					<Cracks frame={frame} />
 					<Lightning frame={frame} at={T.echo} x0={1500} x1={1650} y1={620} seed="echo" strength={0.45} />
 					<RuneRing frame={frame} />
+					<Character frame={frame} />
 					<Emblem frame={frame} />
+					<Headlamp frame={frame} />
 					<Lightning frame={frame} at={T.strike} x0={1010} x1={CX} y1={CY} seed="strike" />
 					{shock(T.strike)}
 					{shock(T.strike + 5)}

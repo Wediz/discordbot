@@ -11,6 +11,19 @@
  */
 export const LOGO: {src: string} | null = null;
 
+/**
+ * Personnage révélé par l'éclair (photo fournie + silhouette générée par
+ * scripts/make_ragnar_assets.py). Mettre null pour l'enlever.
+ * head = position de sa tête dans l'image (1920×1080) : elle est placée au
+ * centre de l'anneau de runes, sa lampe frontale prend la place de la rune.
+ */
+export const CHARACTER: {src: string; matte: string; head: {x: number; y: number}; scale: number} | null = {
+	src: 'assets/ragnar/personnage.jpg',
+	matte: 'assets/ragnar/personnage-matte.png',
+	head: {x: 902, y: 288},
+	scale: 1.08,
+};
+
 export const TITLE = ['ALPHA', 'RAGNAR'];
 export const SUBTITLE = 'URBEX';
 

@@ -18,12 +18,17 @@
     "audio:outro": "python3 scripts/outro_audio.py",
     "render:hud": "remotion render HudUrbex out/hud-urbex-transparent.mov --codec=prores --prores-profile=4444 --image-format=png --pixel-format=yuva444p10le",
     "render:hud-webm": "remotion render HudUrbex out/hud-urbex-transparent.webm --codec=vp9 --image-format=png --pixel-format=yuva420p",
-    "render:hud-apercu": "remotion render HudApercu out/hud-urbex-apercu.mp4 --codec=h264 --crf=18"
+    "render:hud-apercu": "remotion render HudApercu out/hud-urbex-apercu.mp4 --codec=h264 --crf=18",
+    "render:ragnar": "remotion render IntroAlphaRagnar --crf=16 out/brut-ragnar.mp4 && remotion ffmpeg -y -i out/brut-ragnar.mp4 -vf scale=out_range=tv:out_color_matrix=bt709,format=yuv420p -c:v libx264 -preset slow -crf 17 -color_range tv -colorspace bt709 -color_primaries bt709 -color_trc bt709 -af loudnorm=I=-14:TP=-1.5:LRA=11 -c:a aac -b:a 192k -ar 48000 -movflags +faststart out/intro-alpha-ragnar.mp4",
+    "audio:ragnar": "python3 scripts/ragnar_audio.py",
+    "assets:ragnar": "python3 scripts/make_ragnar_assets.py"
   },
   "dependencies": {
     "@fontsource/anton": "^5.3.0",
     "@fontsource/barlow-condensed": "^5.3.0",
+    "@fontsource/cinzel": "^5.3.0",
     "@fontsource/jetbrains-mono": "^5.3.0",
+    "@fontsource/noto-sans-runic": "^5.3.0",
     "@remotion/cli": "^4.0.535",
     "@remotion/fonts": "^4.0.535",
     "@remotion/media": "^4.0.535",

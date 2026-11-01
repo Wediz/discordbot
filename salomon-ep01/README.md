@@ -175,3 +175,25 @@ Tout se règle dans `src/hud/config.ts`, ou sans toucher au code dans **Remotion
 - `npm run render:hud-apercu` → `out/hud-urbex-apercu.mp4` (aperçu sur fond).
 
 Dans ton logiciel : place le fichier transparent **sur une piste au-dessus** de ta vidéo.
+
+---
+
+# Intro ALPHA RAGNAR (15 s, YouTube 16:9 — 1920×1080)
+
+Composition **IntroAlphaRagnar**. Vidéo : `out/intro-alpha-ragnar.mp4`.
+Univers « forge nordique » : runes, lave, éclair, métal forgé — volontairement différent de l'intro Urbex France.
+
+| Temps | Contenu |
+|---|---|
+| 0 → 2 s | Noir, bandes cinéma, battements de cœur, la rune ᚱ couve dans l'ombre, braises |
+| 1 → 5 s | Fissures de lave depuis l'emblème, l'anneau des 24 runes se dessine, tambours qui accélèrent, « LIEUX OUBLIÉS / TERRES INTERDITES / SANS PEUR » |
+| 5 s | **ÉCLAIR** sur l'emblème : flash, onde de choc, gerbe d'étincelles, les bandes s'ouvrent, tonnerre + cor |
+| 5,6 → 9 s | **ALPHA RAGNAR** forgé lettre par lettre (métal incandescent qui refroidit, enclume à chaque lettre) |
+| 8,2 → 9 s | Reflet sur le métal, coup de lame doré qui révèle **URBEX** |
+| 10 → 15 s | Tambours de guerre, éclair lointain, impact final, fondu au noir |
+
+- **Textes, logo, rythme** : `src/alpha-ragnar/content.ts`.
+- **Logo** : déposer le fichier dans `public/assets/ragnar/` et renseigner `LOGO = {src: 'assets/ragnar/…png'}`
+  (sinon l'emblème est la rune ᚱ, « Raidho » = le voyage).
+- **Son** : `npm run audio:ragnar` · **Éléments générés** (fumée, fissures) : `npm run assets:ragnar` ·
+  **Export** : `npm run render:ragnar`.

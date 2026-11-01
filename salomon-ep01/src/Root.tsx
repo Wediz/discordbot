@@ -11,6 +11,8 @@ import {INTRO_DURATION, IntroUrbex} from './intro-urbex/IntroUrbex';
 import {OUTRO_DURATION, OutroUrbex} from './outro-urbex/OutroUrbex';
 import {HUD_DEFAULT, hudSchema, type HudProps} from './hud/config';
 import {HudPreview, HudUrbex} from './hud/HudUrbex';
+import {AlphaRagnar} from './alpha-ragnar/AlphaRagnar';
+import {DURATION as RAGNAR_DURATION} from './alpha-ragnar/content';
 import './theme';
 
 const SIZE = {width: 1080, height: 1920, fps: FPS};
@@ -19,6 +21,7 @@ export const RemotionRoot: React.FC = () => (
 	<>
 		<Composition id="IntroUrbexFrance" component={IntroUrbex} durationInFrames={INTRO_DURATION} width={1920} height={1080} fps={FPS} />
 		<Composition id="OutroUrbexFrance" component={OutroUrbex} durationInFrames={OUTRO_DURATION} width={1920} height={1080} fps={FPS} />
+		<Composition id="IntroAlphaRagnar" component={AlphaRagnar} durationInFrames={RAGNAR_DURATION} width={1920} height={1080} fps={FPS} />
 		<Folder name="HUD">
 			<Composition
 				id="HudUrbex"

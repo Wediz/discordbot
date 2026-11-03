@@ -197,3 +197,21 @@ Univers « forge nordique » : runes, lave, éclair, métal forgé — volontair
   (sinon l'emblème est la rune ᚱ, « Raidho » = le voyage).
 - **Son** : `npm run audio:ragnar` · **Éléments générés** (fumée, fissures) : `npm run assets:ragnar` ·
   **Export** : `npm run render:ragnar`.
+
+---
+
+# INNA SHOP — Fidélité & Parrainage (20 s, vertical 1080×1920)
+
+Composition **InnaFideliteParrainage**. Vidéo : `out/inna-fidelite-parrainage.mp4` (stories, Reels, TikTok).
+
+| Temps | Contenu |
+|---|---|
+| 0 → 3 s | Logo INNA SHOP, « Nouveau », *Fidélité* écrit à la main avec reflet doré |
+| 3 → 7 s | Gagne des points : pièce qui tourne, 1 € = 1 point, bonus Inscription +10, Instagram +20, TikTok +20, Anniversaire +40 |
+| 7 → 10 s | Transforme-les en réductions : tickets 500 points = 5 €, 1000 points = 12 € |
+| 10 → 17 s | **Parraine tes copines** : Toi ♥ Ta copine, lien de parrainage + « Partager », cartes **-10 %** pour elle et **5 € offerts** pour toi, confettis |
+| 17 → 20 s | Rendez-vous sur inna-shops.com, doigt qui appuie sur le bouton ✦ FIDÉLITÉ ✦ |
+
+- **Textes et chiffres** : `src/inna/content.ts` (repris du programme Smile du site).
+- **Logo** : `public/assets/inna/logo-inna-shop.png` (extrait d'une capture ; remplaçable par le fichier d'origine).
+- **Musique + bruitages** (synthèse) : `npm run audio:inna` · **Export** : `npm run render:inna`.

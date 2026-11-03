@@ -13,7 +13,7 @@ import {HUD_DEFAULT, hudSchema, type HudProps} from './hud/config';
 import {HudPreview, HudUrbex} from './hud/HudUrbex';
 import {AlphaRagnar} from './alpha-ragnar/AlphaRagnar';
 import {InnaFidelite} from './inna/InnaFidelite';
-import {DURATION as INNA_DURATION} from './inna/content';
+import {TOTAL as INNA_DURATION} from './inna/content';
 import {DURATION as RAGNAR_DURATION} from './alpha-ragnar/content';
 import './theme';
 

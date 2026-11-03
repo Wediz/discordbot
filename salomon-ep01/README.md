@@ -200,18 +200,20 @@ Univers « forge nordique » : runes, lave, éclair, métal forgé — volontair
 
 ---
 
-# INNA SHOP — Fidélité & Parrainage (20 s, vertical 1080×1920)
+# INNA SHOP — Fidélité & Parrainage (40 s, vertical 1080×1920)
 
 Composition **InnaFideliteParrainage**. Vidéo : `out/inna-fidelite-parrainage.mp4` (stories, Reels, TikTok).
 
 | Temps | Contenu |
 |---|---|
-| 0 → 3 s | Logo INNA SHOP, « Nouveau », *Fidélité* écrit à la main avec reflet doré |
-| 3 → 7 s | Gagne des points : pièce qui tourne, 1 € = 1 point, bonus Inscription +10, Instagram +20, TikTok +20, Anniversaire +40 |
-| 7 → 10 s | Transforme-les en réductions : tickets 500 points = 5 €, 1000 points = 12 € |
-| 10 → 17 s | **Parraine tes copines** : Toi ♥ Ta copine, lien de parrainage + « Partager », cartes **-10 %** pour elle et **5 € offerts** pour toi, confettis |
-| 17 → 20 s | Rendez-vous sur inna-shops.com, doigt qui appuie sur le bouton ✦ FIDÉLITÉ ✦ |
+| 0 → 6 s | Logo INNA SHOP, « Nouveau », *Fidélité* écrit à la main avec reflet doré |
+| 6 → 14 s | Gagne des points : pièce qui tourne, 1 € = 1 point, bonus Inscription +10, Instagram +20, TikTok +20, Anniversaire +40 |
+| 14 → 20 s | Transforme-les en réductions : tickets 500 points = 5 €, 1000 points = 12 € |
+| 20 → 34 s | **Parraine tes copines** : Toi ♥ Ta copine, lien de parrainage + « Partager », cartes **-10 %** pour elle et **5 € offerts** pour toi, confettis |
+| 34 → 40 s | Rendez-vous sur inna-shops.com, doigt qui appuie sur le bouton ✦ FIDÉLITÉ ✦ |
 
 - **Textes et chiffres** : `src/inna/content.ts` (repris du programme Smile du site).
 - **Logo** : `public/assets/inna/logo-inna-shop.png` (extrait d'une capture ; remplaçable par le fichier d'origine).
 - **Musique + bruitages** (synthèse) : `npm run audio:inna` · **Export** : `npm run render:inna`.
+
+Vitesse : `SLOW` dans `src/inna/content.ts` (2 = lent, 40 s ; 1 = rapide, 20 s), même valeur en haut de `scripts/inna_audio.py`.

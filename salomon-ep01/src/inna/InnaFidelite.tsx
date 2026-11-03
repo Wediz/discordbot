@@ -2,7 +2,10 @@ import {Audio} from '@remotion/media';
 import {loadFont} from '@remotion/fonts';
 import React from 'react';
 import {AbsoluteFill, Easing, Img, interpolate, random, Sequence, spring, staticFile, useCurrentFrame, useVideoConfig} from 'remotion';
-import {BEAT, BUTTON, C, CTA, DURATION, EARN, LOGO, REDEEM, REFERRAL, S, WEBSITE} from './content';
+import {BEAT, BUTTON, C, CTA, DURATION, EARN, LOGO, REDEEM, REFERRAL, S, SLOW, WEBSITE} from './content';
+
+/** Image courante ralentie (voir SLOW dans content.ts). */
+const useSlowFrame = () => useCurrentFrame() / SLOW;
 
 loadFont({family: 'Playfair', url: staticFile('fonts/playfair-display-latin-700-normal.woff2'), weight: '700'});
 loadFont({family: 'Playfair', url: staticFile('fonts/playfair-display-latin-600-italic.woff2'), weight: '600', style: 'italic'});
@@ -29,7 +32,7 @@ const script: React.CSSProperties = {fontFamily: 'Vibes', fontWeight: 400, color
 /* ───────────── Décor : fond crème, taches de couleur, paillettes ───────────── */
 
 const Backdrop: React.FC = () => {
-	const frame = useCurrentFrame();
+	const frame = useSlowFrame();
 	const pinkness = tw(frame, S.referral - 10, S.referral + 20, 0, 1) * (1 - tw(frame, S.cta, S.cta + 20, 0, 0.6));
 	const blob = (x: number, y: number, r: number, color: string, speed: number, phase: number) => (
 		<div
@@ -96,7 +99,7 @@ const Heart: React.FC<{size: number; color?: string; style?: React.CSSProperties
 
 /** Cœurs qui montent doucement (section parrainage). */
 const FloatingHearts: React.FC<{from: number; to: number}> = ({from, to}) => {
-	const frame = useCurrentFrame();
+	const frame = useSlowFrame();
 	if (frame < from || frame > to + 60) return null;
 	return (
 		<>
@@ -114,7 +117,7 @@ const FloatingHearts: React.FC<{from: number; to: number}> = ({from, to}) => {
 
 /** Pluie de confettis. */
 const Confetti: React.FC<{at: number; x: number; y: number; count?: number}> = ({at, x, y, count = 70}) => {
-	const frame = useCurrentFrame();
+	const frame = useSlowFrame();
 	const t = frame - at;
 	if (t < 0 || t > 80) return null;
 	const colors = [C.rose, C.gold, C.latte, '#F6C8D0', C.white, C.roseDeep];
@@ -189,7 +192,7 @@ const Avatar: React.FC<{size: number; color: string; hair: string}> = ({size, co
 
 /** Entrée/sortie commune à chaque section (glisse + flou léger). */
 const SectionFx: React.FC<{dur: number; children: React.ReactNode}> = ({dur, children}) => {
-	const f = useCurrentFrame();
+	const f = useSlowFrame();
 	const enter = tw(f, 0, 14, 0, 1);
 	const exit = tw(f, dur - 10, dur, 0, 1, Easing.in(Easing.cubic));
 	return (
@@ -200,7 +203,7 @@ const SectionFx: React.FC<{dur: number; children: React.ReactNode}> = ({dur, chi
 };
 
 const Intro: React.FC = () => {
-	const f = useCurrentFrame();
+	const f = useSlowFrame();
 	const bounce = useBounce();
 	const shine = tw(f, 40, 70, -30, 130);
 	return (
@@ -236,7 +239,7 @@ const Intro: React.FC = () => {
 };
 
 const Earn: React.FC = () => {
-	const f = useCurrentFrame();
+	const f = useSlowFrame();
 	const bounce = useBounce();
 	const coinFlip = tw(f, 14, 34, 0, 720);
 	return (
@@ -264,7 +267,7 @@ const Earn: React.FC = () => {
 						{EARN.main.left} <span style={{color: C.roseDeep}}>=</span> {EARN.main.right}
 					</div>
 				</div>
-				<div style={{...sans, fontWeight: 500, fontSize: 38, color: C.caramel, marginTop: 26, opacity: tw(f, 22, 34, 0, 1)}}>à chaque commande</div>
+				<div style={{...sans, fontWeight: 500, fontSize: 44, color: C.caramel, marginTop: 26, opacity: tw(f, 22, 34, 0, 1)}}>à chaque commande</div>
 				{/* Bonus */}
 				<div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 34, marginTop: 110, width: 920}}>
 					{EARN.ways.map((w, i) => {
@@ -289,9 +292,9 @@ const Earn: React.FC = () => {
 									<Icon name={w.icon} size={46} color={C.roseDeep} />
 								</div>
 								<div>
-									<div style={{...sans, fontWeight: 500, fontSize: 34, color: C.caramel}}>{w.label}</div>
+									<div style={{...sans, fontWeight: 500, fontSize: 40, color: C.caramel}}>{w.label}</div>
 									<div style={{...serif, fontSize: 54, color: C.cocoa}}>
-										{w.points} <span style={{fontSize: 30}}>pts</span>
+										{w.points} <span style={{fontSize: 36}}>pts</span>
 									</div>
 								</div>
 							</div>
@@ -305,7 +308,7 @@ const Earn: React.FC = () => {
 };
 
 const Voucher: React.FC<{points: string; value: string; at: number; tilt: number}> = ({points, value, at, tilt}) => {
-	const f = useCurrentFrame();
+	const f = useSlowFrame();
 	const bounce = useBounce();
 	const s = bounce(f, at, 11);
 	return (
@@ -336,18 +339,18 @@ const Voucher: React.FC<{points: string; value: string; at: number; tilt: number
 			<div style={{position: 'absolute', left: 300, top: 40, bottom: 40, borderLeft: `3px dashed ${C.latte}`}} />
 			<div style={{position: 'absolute', left: 0, width: 300, top: 0, bottom: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center'}}>
 				<Icon name="gift" size={80} color={C.roseDeep} />
-				<div style={{...sans, fontSize: 34, color: C.caramel, marginTop: 10}}>{points}</div>
+				<div style={{...sans, fontSize: 40, color: C.caramel, marginTop: 10}}>{points}</div>
 			</div>
 			<div style={{position: 'absolute', left: 300, right: 0, top: 0, bottom: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center'}}>
 				<div style={{...serif, fontSize: 130, lineHeight: 1, color: C.cocoa}}>{value}</div>
-				<div style={{...sans, fontWeight: 500, fontSize: 34, color: C.caramel, marginTop: 8}}>de réduction</div>
+				<div style={{...sans, fontWeight: 500, fontSize: 40, color: C.caramel, marginTop: 8}}>de réduction</div>
 			</div>
 		</div>
 	);
 };
 
 const Redeem: React.FC = () => {
-	const f = useCurrentFrame();
+	const f = useSlowFrame();
 	return (
 		<SectionFx dur={S.referral - S.redeem}>
 			<AbsoluteFill style={{alignItems: 'center', paddingTop: 470}}>
@@ -362,7 +365,7 @@ const Redeem: React.FC = () => {
 };
 
 const Referral: React.FC = () => {
-	const f = useCurrentFrame();
+	const f = useSlowFrame();
 	const bounce = useBounce();
 	const dur = S.cta - S.referral;
 	// lien qui relie les deux copines, cœur qui voyage
@@ -377,7 +380,7 @@ const Referral: React.FC = () => {
 	return (
 		<SectionFx dur={dur}>
 			<AbsoluteFill>
-				<div style={{position: 'absolute', top: 240, left: 0, right: 0, textAlign: 'center', ...sans, fontWeight: 500, fontSize: 36, letterSpacing: '0.08em', color: C.caramel, opacity: tw(f, 0, 12, 0, 1)}}>
+				<div style={{position: 'absolute', top: 240, left: 0, right: 0, textAlign: 'center', ...sans, fontWeight: 500, fontSize: 42, letterSpacing: '0.08em', color: C.caramel, opacity: tw(f, 0, 12, 0, 1)}}>
 					{REFERRAL.kicker}
 				</div>
 				<div
@@ -431,9 +434,9 @@ const Referral: React.FC = () => {
 
 				{/* Lien de parrainage + bouton Partager */}
 				<div style={{position: 'absolute', top: 1080, left: 90, right: 90, opacity: tw(f, 54, 66, 0, 1), translate: `0px ${tw(f, 54, 70, 40, 0)}px`}}>
-					<div style={{...sans, fontWeight: 500, fontSize: 30, color: C.caramel, marginBottom: 12, marginLeft: 8}}>{REFERRAL.link}</div>
+					<div style={{...sans, fontWeight: 500, fontSize: 36, color: C.caramel, marginBottom: 12, marginLeft: 8}}>{REFERRAL.link}</div>
 					<div style={{display: 'flex', gap: 18}}>
-						<div style={{flex: 1, background: C.white, borderRadius: 26, padding: '24px 30px', ...sans, fontWeight: 500, fontSize: 34, color: '#7A6A60', boxShadow: '0 10px 26px rgba(139,106,78,0.14)', whiteSpace: 'nowrap', overflow: 'hidden'}}>
+						<div style={{flex: 1, background: C.white, borderRadius: 26, padding: '24px 30px', ...sans, fontWeight: 500, fontSize: 40, color: '#7A6A60', boxShadow: '0 10px 26px rgba(139,106,78,0.14)', whiteSpace: 'nowrap', overflow: 'hidden'}}>
 							{WEBSITE}/…
 						</div>
 						<div
@@ -444,7 +447,7 @@ const Referral: React.FC = () => {
 								...sans,
 								color: C.white,
 								fontWeight: 700,
-								fontSize: 34,
+								fontSize: 40,
 								scale: `${press}`,
 								boxShadow: f >= tap ? `0 0 0 ${tw(f, tap, tap + 16, 0, 26)}px rgba(210,127,146,${tw(f, tap, tap + 16, 0.45, 0)})` : 'none',
 							}}
@@ -475,9 +478,9 @@ const Referral: React.FC = () => {
 									boxShadow: '0 20px 40px rgba(139,106,78,0.25)',
 								}}
 							>
-								<div style={{...sans, fontWeight: 600, fontSize: 32, color: C.white, letterSpacing: '0.06em'}}>{g.who.toUpperCase()}</div>
+								<div style={{...sans, fontWeight: 600, fontSize: 38, color: C.white, letterSpacing: '0.06em'}}>{g.who.toUpperCase()}</div>
 								<div style={{...serif, fontSize: g.big.length > 6 ? 84 : 120, lineHeight: 1.1, color: C.white, marginTop: 14, textShadow: '0 4px 14px rgba(120,60,60,0.25)'}}>{g.big}</div>
-								<div style={{...sans, fontWeight: 500, fontSize: 30, color: C.white, marginTop: 10}}>{g.small}</div>
+								<div style={{...sans, fontWeight: 500, fontSize: 36, color: C.white, marginTop: 10}}>{g.small}</div>
 							</div>
 						);
 					})}
@@ -494,7 +497,7 @@ const Referral: React.FC = () => {
 };
 
 const Cta: React.FC = () => {
-	const f = useCurrentFrame();
+	const f = useSlowFrame();
 	const bounce = useBounce();
 	const pulse = 1 + 0.05 * Math.max(0, Math.sin(((f - 30) / BEAT) * Math.PI));
 	const tap = 52;
@@ -507,7 +510,7 @@ const Cta: React.FC = () => {
 				<Img src={staticFile(LOGO)} style={{width: 300, scale: `${bounce(f, 2)}`}} />
 				<div style={{...sans, fontWeight: 500, fontSize: 42, color: C.caramel, marginTop: 80}}>{CTA.line}</div>
 				<div style={{...serif, fontSize: 100, marginTop: 6, scale: `${bounce(f, 10)}`}}>{WEBSITE}</div>
-				<div style={{...sans, fontWeight: 500, fontSize: 36, color: C.caramel, marginTop: 110, opacity: tw(f, 18, 28, 0, 1)}}>{CTA.hint}</div>
+				<div style={{...sans, fontWeight: 500, fontSize: 42, color: C.caramel, marginTop: 110, opacity: tw(f, 18, 28, 0, 1)}}>{CTA.hint}</div>
 				<div
 					style={{
 						marginTop: 34,
@@ -551,24 +554,24 @@ const Cta: React.FC = () => {
 
 export const InnaFidelite: React.FC = () => {
 	const {fps} = useVideoConfig();
-	const frame = useCurrentFrame();
+	const frame = useSlowFrame();
 	return (
 		<AbsoluteFill>
 			<Backdrop />
-			<Sequence name="1 Intro" from={S.intro} durationInFrames={S.earn - S.intro} premountFor={fps}>
+			<Sequence name="1 Intro" from={Math.round(S.intro * SLOW)} durationInFrames={Math.round((S.earn - S.intro) * SLOW)} premountFor={fps}>
 				<Intro />
 			</Sequence>
-			<Sequence name="2 Gagner des points" from={S.earn} durationInFrames={S.redeem - S.earn} premountFor={fps}>
+			<Sequence name="2 Gagner des points" from={Math.round(S.earn * SLOW)} durationInFrames={Math.round((S.redeem - S.earn) * SLOW)} premountFor={fps}>
 				<Earn />
 			</Sequence>
-			<Sequence name="3 Échanger" from={S.redeem} durationInFrames={S.referral - S.redeem} premountFor={fps}>
+			<Sequence name="3 Échanger" from={Math.round(S.redeem * SLOW)} durationInFrames={Math.round((S.referral - S.redeem) * SLOW)} premountFor={fps}>
 				<Redeem />
 			</Sequence>
 			<FloatingHearts from={S.referral + 20} to={S.cta - 30} />
-			<Sequence name="4 Parrainage" from={S.referral} durationInFrames={S.cta - S.referral} premountFor={fps}>
+			<Sequence name="4 Parrainage" from={Math.round(S.referral * SLOW)} durationInFrames={Math.round((S.cta - S.referral) * SLOW)} premountFor={fps}>
 				<Referral />
 			</Sequence>
-			<Sequence name="5 Appel à l'action" from={S.cta} durationInFrames={DURATION - S.cta} premountFor={fps}>
+			<Sequence name="5 Appel à l'action" from={Math.round(S.cta * SLOW)} durationInFrames={Math.round((DURATION - S.cta) * SLOW)} premountFor={fps}>
 				<Cta />
 			</Sequence>
 			{/* fondu de fin */}

@@ -13,10 +13,11 @@ FPS = 30
 BEAT = 15
 DURATION = 600
 S = dict(intro=0, earn=90, redeem=210, referral=300, cta=510)
+SLOW = 2  # même valeur que SLOW dans src/inna/content.ts
 
 
 def s(f: float) -> float:
-    return f / FPS
+    return f * SLOW / FPS
 
 
 def note(name: str) -> float:

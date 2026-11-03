@@ -50,8 +50,16 @@ export const CTA = {
 	hint: 'Clique sur le bouton',
 };
 
+/**
+ * Vitesse de lecture : 1 = rapide (20 s), 2 = deux fois plus lent (40 s),
+ * pour laisser le temps de lire. Après changement : npm run audio:inna.
+ */
+export const SLOW = 2;
+
 export const BEAT = 15;
+/** Durée « de base » (avant ralenti) ; la vraie durée est TOTAL. */
 export const DURATION = 600;
+export const TOTAL = Math.round(DURATION * SLOW);
 
 /** Découpage (en images) */
 export const S = {

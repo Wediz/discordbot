@@ -13,6 +13,7 @@ import {HUD_DEFAULT, hudSchema, type HudProps} from './hud/config';
 import {HudPreview, HudUrbex} from './hud/HudUrbex';
 import {AlphaRagnar} from './alpha-ragnar/AlphaRagnar';
 import {InnaFidelite} from './inna/InnaFidelite';
+import {SUBSCRIBE_DURATION, SubscribeOverlay, SubscribePreview} from './yt-subscribe/SubscribeOverlay';
 import {TOTAL as INNA_DURATION} from './inna/content';
 import {DURATION as RAGNAR_DURATION} from './alpha-ragnar/content';
 import './theme';
@@ -25,6 +26,44 @@ export const RemotionRoot: React.FC = () => (
 		<Composition id="OutroUrbexFrance" component={OutroUrbex} durationInFrames={OUTRO_DURATION} width={1920} height={1080} fps={FPS} />
 		<Composition id="IntroAlphaRagnar" component={AlphaRagnar} durationInFrames={RAGNAR_DURATION} width={1920} height={1080} fps={FPS} />
 		<Composition id="InnaFideliteParrainage" component={InnaFidelite} durationInFrames={INNA_DURATION} width={1080} height={1920} fps={FPS} />
+		<Folder name="Abonne-toi">
+			<Composition
+				id="AbonneUrbexFrance"
+				component={SubscribeOverlay}
+				defaultProps={{channel: 'URBEX FRANCE', tagline: 'Explorations & lieux oubliés', avatar: 'assets/brand/logo-urbex-fr.png', accent: '#FF5B1A'}}
+				durationInFrames={SUBSCRIBE_DURATION}
+				width={1920}
+				height={1080}
+				fps={FPS}
+			/>
+			<Composition
+				id="AbonneAlphaRagnar"
+				component={SubscribeOverlay}
+				defaultProps={{channel: 'ALPHA RAGNAR', tagline: 'Urbex · lieux oubliés', avatar: 'assets/yt/avatar-alpha-ragnar.jpg', accent: '#E9B44C'}}
+				durationInFrames={SUBSCRIBE_DURATION}
+				width={1920}
+				height={1080}
+				fps={FPS}
+			/>
+			<Composition
+				id="AbonneApercuUrbexFrance"
+				component={SubscribePreview}
+				defaultProps={{channel: 'URBEX FRANCE', tagline: 'Explorations & lieux oubliés', avatar: 'assets/brand/logo-urbex-fr.png', accent: '#FF5B1A'}}
+				durationInFrames={SUBSCRIBE_DURATION}
+				width={1920}
+				height={1080}
+				fps={FPS}
+			/>
+			<Composition
+				id="AbonneApercuAlphaRagnar"
+				component={SubscribePreview}
+				defaultProps={{channel: 'ALPHA RAGNAR', tagline: 'Urbex · lieux oubliés', avatar: 'assets/yt/avatar-alpha-ragnar.jpg', accent: '#E9B44C'}}
+				durationInFrames={SUBSCRIBE_DURATION}
+				width={1920}
+				height={1080}
+				fps={FPS}
+			/>
+		</Folder>
 		<Folder name="HUD">
 			<Composition
 				id="HudUrbex"

@@ -217,3 +217,20 @@ Composition **InnaFideliteParrainage**. Vidéo : `out/inna-fidelite-parrainage.m
 - **Musique + bruitages** (synthèse) : `npm run audio:inna` · **Export** : `npm run render:inna`.
 
 Vitesse : `SLOW` dans `src/inna/content.ts` (2 = lent, 40 s ; 1 = rapide, 20 s), même valeur en haut de `scripts/inna_audio.py`.
+
+---
+
+# Animation « J'aime / Abonne-toi / Cloche » (7 s, 1920×1080, fond transparent)
+
+Compositions **AbonneUrbexFrance** et **AbonneAlphaRagnar** (transparentes), **AbonneApercu…** (sur fond).
+Un bandeau apparaît en bas à gauche (avatar + nom de la chaîne), un curseur clique sur J'aime,
+S'abonner (→ Abonné ✓) puis la cloche, « Merci pour le soutien ! ♥ », et le bandeau repart. Avec les sons.
+
+- **Fichiers** : `out/abonne-<chaîne>-transparent.mov` (ProRes 4444, pour DaVinci / Premiere),
+  `…-transparent.webm` (plus léger), `…-apercu.mp4`.
+- **Nom, sous-titre, avatar, couleur** : dans `src/Root.tsx` (props des compositions Abonne…).
+- **Export** : `npm run render:abonne-urbex-france` / `npm run render:abonne-alpha-ragnar` · **Sons** : `npm run audio:abonne`.
+
+**Dans DaVinci** : glisse le `.mov` sur une piste au-dessus de ta vidéo, au moment voulu
+(souvent vers 30 s – 1 min, puis à la fin). Si le fond apparaît noir : clic droit sur le clip dans
+le Media Pool → Clip Attributes → Alpha Mode : Straight.
